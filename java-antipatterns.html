@@ -947,9 +947,12 @@ public RefundCommand markRefundRequested(Long paymentId) {
 }
 
 // transaction 밖 또는 이벤트 처리
-pgClient.refund(command.pgKey());`,
+pgClient.refund(command.pgKey());
+refundService.markRefundCompleted(command.paymentId());
+
+// 실패 시 재시도/outbox/보상 처리 필요`,
         problem: "외부 PG 호출 성공 후 DB 저장이 실패하거나, DB 락을 잡은 채 외부 지연이 발생할 수 있다. 호출 순서와 보상 전략을 설명해야 한다.",
-        interview: "외부 호출과 DB 트랜잭션을 섞을 때는 실패 순서, 재시도, 보상 처리까지 고려해야 합니다."
+        interview: "외부 호출과 DB 트랜잭션을 분리할 때도 후속 상태 반영, 재시도, outbox나 보상 처리까지 함께 설계해야 합니다."
       },
       {
         name: "readOnly 트랜잭션 오해",
@@ -1251,15 +1254,21 @@ Map<String, Object> attributes = Map.of(
   pgClient.pay(request.paymentKey(), request.amount());
   paymentRepository.save(new Payment(request.orderId(), "PAID"));
 }`,
-        good: `public void pay(PayRequest request) {
-  if (paymentRepository.existsByRequestKey(request.requestKey())) {
-    return;
+        good: `public PaymentResult pay(PayRequest request) {
+  Payment payment = paymentRepository.findByRequestKey(request.requestKey())
+      .orElseGet(() -> paymentRepository.insertPending(
+          request.orderId(), request.requestKey())); // unique constraint
+
+  if (payment.isCompleted()) {
+    return PaymentResult.from(payment);
   }
-  pgClient.pay(request.paymentKey(), request.amount());
-  paymentRepository.save(Payment.paid(request.orderId(), request.requestKey()));
+
+  pgClient.pay(request.paymentKey(), request.amount(), request.requestKey());
+  payment.complete();
+  return PaymentResult.from(paymentRepository.save(payment));
 }`,
         problem: "네트워크 재시도나 더블클릭으로 같은 요청이 여러 번 들어오면 결제나 상태 변경이 중복될 수 있다.",
-        interview: "결제나 취소처럼 부작용이 큰 유스케이스는 요청 식별자와 상태 확인으로 중복 요청을 방지해야 합니다."
+        interview: "결제나 취소처럼 부작용이 큰 유스케이스는 unique한 요청 키로 선점하고, 재시도 시 기존 결과를 반환하며, 외부 PG에도 idempotency key를 전달해야 합니다."
       },
       {
         name: "Exception 400/404/409 구분 없음",
@@ -1581,9 +1590,14 @@ public OrderResponse find(Long id) {
 
 BooleanExpression keywordContains(String keyword) {
   return hasText(keyword) ? order.memo.contains(keyword) : null;
-}`,
+}
+
+query.select(order)
+    .from(order)
+    .where(statusEq(status), keywordContains(keyword))
+    .fetch();`,
         problem: "검색 조건이 null일 수 있는데 그대로 eq/contains를 호출하면 NPE가 나거나 의도하지 않은 조건이 붙을 수 있다.",
-        interview: "동적 쿼리는 조건 생성 메서드를 작게 나누고 null 조건을 명확히 제외해 검색 의도를 드러내야 합니다."
+        interview: "QueryDSL 동적 쿼리는 null 조건을 where(cond1, cond2)처럼 안전하게 무시되는 맥락에서 사용해야 합니다."
       },
       {
         name: "Liquibase 변경 이력 없이 스키마 수동 변경",
