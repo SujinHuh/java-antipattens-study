@@ -1,0 +1,1721 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Java/Spring Legacy Antipattern Review</title>
+  <style>
+    :root {
+      --bg: #f7f8fb;
+      --panel: #ffffff;
+      --text: #172033;
+      --muted: #647084;
+      --line: #d9dfeb;
+      --bad-bg: #fff1f1;
+      --bad-line: #f1b7b7;
+      --bad-title: #b42318;
+      --good-bg: #eefaf2;
+      --good-line: #a7dfb8;
+      --good-title: #177245;
+      --primary: #2457c5;
+      --tag: #eef3ff;
+      --shadow: 0 10px 26px rgba(23, 32, 51, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.55;
+    }
+
+    header {
+      padding: 32px 24px 20px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel);
+    }
+
+    .shell {
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 30px;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      max-width: 900px;
+    }
+
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      padding: 16px 24px;
+      background: rgba(247, 248, 251, 0.96);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(10px);
+    }
+
+    .search-row {
+      display: grid;
+      grid-template-columns: minmax(240px, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    input[type="search"] {
+      width: 100%;
+      padding: 13px 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      font-size: 15px;
+      background: var(--panel);
+      color: var(--text);
+    }
+
+    .count {
+      color: var(--muted);
+      white-space: nowrap;
+      font-size: 14px;
+    }
+
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .filter-btn {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .filter-btn.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+
+    main {
+      padding: 24px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .card-head {
+      padding: 18px 18px 12px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .card-title-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 19px;
+      line-height: 1.35;
+      letter-spacing: 0;
+    }
+
+    .category {
+      flex: 0 0 auto;
+      border-radius: 999px;
+      padding: 5px 9px;
+      background: #eef2f7;
+      color: #334155;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      border: 1px solid #d6e1ff;
+      border-radius: 999px;
+      padding: 3px 8px;
+      background: var(--tag);
+      color: #244174;
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .card-body {
+      padding: 16px 18px 18px;
+    }
+
+    .compare {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .code-box {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    .code-label {
+      padding: 8px 10px;
+      font-weight: 800;
+      font-size: 13px;
+      border-bottom: 1px solid currentColor;
+    }
+
+    .bad .code-label {
+      color: var(--bad-title);
+      background: var(--bad-bg);
+    }
+
+    .good .code-label {
+      color: var(--good-title);
+      background: var(--good-bg);
+    }
+
+    pre {
+      margin: 0;
+      padding: 12px;
+      overflow-x: auto;
+      font-size: 12.5px;
+      line-height: 1.5;
+      tab-size: 2;
+      white-space: pre;
+    }
+
+    .bad pre {
+      background: var(--bad-bg);
+      border-top: 1px solid var(--bad-line);
+    }
+
+    .good pre {
+      background: var(--good-bg);
+      border-top: 1px solid var(--good-line);
+    }
+
+    .tok-comment {
+      color: #667085;
+      font-style: italic;
+    }
+
+    .tok-anno {
+      color: #7c3aed;
+      font-weight: 700;
+    }
+
+    .tok-keyword {
+      color: #1d4ed8;
+      font-weight: 700;
+    }
+
+    .tok-type {
+      color: #0f766e;
+      font-weight: 700;
+    }
+
+    .tok-string {
+      color: #b45309;
+    }
+
+    .tok-number {
+      color: #be123c;
+      font-weight: 650;
+    }
+
+    .problem {
+      margin: 0 0 12px;
+      color: #344054;
+    }
+
+    .interview {
+      margin: 0;
+      padding: 10px 12px;
+      border-left: 4px solid var(--primary);
+      background: #f1f5ff;
+      border-radius: 6px;
+      font-weight: 650;
+    }
+
+    .empty {
+      display: none;
+      padding: 28px;
+      text-align: center;
+      color: var(--muted);
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+    }
+
+    @media (max-width: 980px) {
+      .grid,
+      .compare {
+        grid-template-columns: 1fr;
+      }
+
+      .search-row {
+        grid-template-columns: 1fr;
+      }
+
+      .count {
+        white-space: normal;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="shell">
+      <h1>Java/Spring 레거시 안티패턴 빠른 복습</h1>
+      <p class="subtitle">
+        문제를 하나씩 푸는 화면이 아니라, 면접 전에 Controller, Service, Repository, DTO/Entity, Exception, Test, SOLID, Legacy Code 유형을 빠르게 훑어보는 학습 페이지입니다.
+      </p>
+    </div>
+  </header>
+
+  <section class="toolbar">
+    <div class="shell">
+      <div class="search-row">
+        <input id="searchInput" type="search" placeholder="안티패턴 이름, 키워드, 설명으로 검색">
+        <div id="count" class="count"></div>
+      </div>
+      <div id="filters" class="filters"></div>
+    </div>
+  </section>
+
+  <main>
+    <div class="shell">
+      <section id="cards" class="grid" aria-live="polite"></section>
+      <div id="empty" class="empty">검색 조건에 맞는 카드가 없습니다.</div>
+    </div>
+  </main>
+
+  <script>
+    const categories = [
+      "All",
+      "Controller",
+      "Service",
+      "Repository",
+      "DTO / Entity",
+      "Exception",
+      "Test",
+      "SOLID",
+      "Legacy Code",
+      "Util",
+      "AOP",
+      "RDBMS",
+      "JPA / QueryDSL"
+    ];
+
+    const cards = [
+      {
+        name: "Controller에 비즈니스 로직 집중",
+        category: "Controller",
+        keywords: ["Controller 책임 과다", "SRP 위반", "Service 책임 누락"],
+        bad: `// @RestController
+class CouponController {
+  private final CouponRepository repo = new CouponRepository();
+
+  // @PostMapping("/coupons/use")
+  public String use(CouponUseRequest request) {
+    Coupon coupon = repo.findByCode(request.code);
+    if (coupon == null || coupon.expired) {
+      return "fail";
+    }
+    coupon.used = true;
+    repo.save(coupon);
+    return "ok";
+  }
+}`,
+        good: `// @RestController
+class CouponController {
+  private final CouponService service;
+
+  public ResponseEntity<CouponUseResponse> use(
+      /* @Valid @RequestBody */ CouponUseRequest request) {
+    CouponUseResponse response = service.use(request);
+    return ResponseEntity.ok(response);
+  }
+}`,
+        problem: "HTTP 계층이 쿠폰 조회, 만료 판단, 상태 변경, 저장까지 처리한다. Controller가 유스케이스를 직접 수행하면 테스트와 변경이 어려워진다.",
+        interview: "Controller는 요청/응답 경계에 집중하고, 비즈니스 판단과 상태 변경은 Service 유스케이스로 분리해야 합니다."
+      },
+      {
+        name: "Service 없이 Controller에서 검증과 계산 수행",
+        category: "Controller",
+        keywords: ["계층 책임", "Validation", "Transaction Script"],
+        bad: `// @PostMapping("/orders")
+public Map<String, Object> order(OrderRequest request) {
+  if (request.amount <= 0) {
+    return Map.of("status", 400);
+  }
+  int finalPrice = request.amount;
+  if ("VIP".equals(request.grade)) {
+    finalPrice = (int) (finalPrice * 0.9);
+  }
+  orderRepository.save(new Order(request.userId, finalPrice));
+  return Map.of("status", 200);
+}`,
+        good: `// @PostMapping("/orders")
+public ResponseEntity<OrderResponse> order(
+    /* @Valid @RequestBody */ OrderRequest request) {
+  OrderResponse response = orderService.order(request);
+  return ResponseEntity.status(201).body(response);
+}`,
+        problem: "검증, 가격 정책, 저장이 Controller에 섞여 있다. HTTP 상태코드도 Map 안의 숫자로 표현되어 실제 HTTP 응답과 API 계약이 흔들린다.",
+        interview: "Controller에서 계산과 저장까지 처리하면 계층 책임이 무너져 Service 테스트와 트랜잭션 경계를 잡기 어렵습니다."
+      },
+      {
+        name: "Controller가 Entity를 그대로 응답",
+        category: "DTO / Entity",
+        keywords: ["Entity 직접 노출", "DTO/Entity 분리 실패", "API 계약"],
+        bad: `// @GetMapping("/users/{id}")
+public User find(Long id) {
+  return userService.find(id);
+}
+
+class User {
+  public Long id;
+  public String email;
+  public String passwordHash;
+  public boolean admin;
+}`,
+        good: `// @GetMapping("/users/{id}")
+public UserResponse find(Long id) {
+  User user = userService.find(id);
+  return new UserResponse(user.id(), user.email());
+}
+
+record UserResponse(Long id, String email) {}`,
+        problem: "저장 모델이 API 응답 모델이 되면 내부 필드가 노출되고, DB 모델 변경이 API 변경으로 번진다.",
+        interview: "Entity는 영속 상태를 표현하고 Response DTO는 외부 계약을 표현하므로 둘을 분리해야 합니다."
+      },
+      {
+        name: "Repository에서 비즈니스 판단",
+        category: "Repository",
+        keywords: ["Repository 책임 위반", "계층 책임", "도메인 정책"],
+        bad: `class CouponRepository {
+  public boolean canUse(String code, Long userId) {
+    Coupon coupon = findByCode(code);
+    return coupon != null
+        && !coupon.used
+        && coupon.ownerId.equals(userId)
+        && !coupon.expired;
+  }
+}`,
+        good: `class CouponService {
+  public void use(CouponUseRequest request) {
+    Coupon coupon = couponRepository.findByCode(request.code())
+        .orElseThrow(() -> new CouponNotFoundException(request.code()));
+    coupon.validateOwner(request.userId());
+    coupon.use(clock.now());
+    couponRepository.save(coupon);
+  }
+}`,
+        problem: "Repository가 저장소 접근을 넘어 쿠폰 사용 가능 정책까지 판단한다. 정책 변경 시 저장소 코드가 계속 바뀐다.",
+        interview: "Repository는 조회/저장 책임에 집중하고, 사용 가능 여부 같은 도메인 정책은 Service나 Domain 객체에서 판단해야 합니다."
+      },
+      {
+        name: "Repository가 null 반환",
+        category: "Repository",
+        keywords: ["null 처리", "Optional", "NPE 위험"],
+        bad: `class OrderRepository {
+  public Order findById(Long id) {
+    for (Order order : orders) {
+      if (order.id.equals(id)) {
+        return order;
+      }
+    }
+    return null;
+  }
+}`,
+        good: `class OrderRepository {
+  public Optional<Order> findById(Long id) {
+    return orders.stream()
+        .filter(order -> order.id().equals(id))
+        .findFirst();
+  }
+}
+
+Order order = repository.findById(id)
+    .orElseThrow(() -> new OrderNotFoundException(id));`,
+        problem: "조회 실패 가능성이 타입에 드러나지 않아 호출부가 null 처리를 놓치기 쉽다.",
+        interview: "조회 실패가 가능한 Repository 메서드는 Optional이나 명확한 예외 흐름으로 실패 가능성을 드러내야 합니다."
+      },
+      {
+        name: "Optional.get 직접 호출",
+        category: "Service",
+        keywords: ["Optional 오남용", "예외 흐름", "조회 실패"],
+        bad: `public Order cancel(Long orderId) {
+  Order order = orderRepository.findById(orderId).get();
+  order.cancel();
+  return orderRepository.save(order);
+}`,
+        good: `public Order cancel(Long orderId) {
+  Order order = orderRepository.findById(orderId)
+      .orElseThrow(() -> new OrderNotFoundException(orderId));
+  order.cancel();
+  return orderRepository.save(order);
+}`,
+        problem: "Optional을 반환받았지만 바로 get을 호출하면 값이 없을 때 NoSuchElementException으로 터지고 도메인 의미가 사라진다.",
+        interview: "Optional은 get으로 꺼내기보다 orElseThrow로 조회 실패를 도메인 예외로 바꾸는 편이 안전합니다."
+      },
+      {
+        name: "orElse로 비용 큰 기본값 생성",
+        category: "Service",
+        keywords: ["Optional", "orElse vs orElseGet", "성능"],
+        bad: `Order order = orderRepository.findById(id)
+    .orElse(createDefaultOrder(id));`,
+        good: `Order order = orderRepository.findById(id)
+    .orElseGet(() -> createDefaultOrder(id));`,
+        problem: "orElse의 인자는 Optional에 값이 있어도 먼저 평가된다. 기본값 생성이 비싸거나 부작용이 있으면 불필요한 작업이 발생한다.",
+        interview: "기본값 생성 비용이나 부작용이 있다면 orElse보다 orElseGet으로 지연 생성해야 합니다."
+      },
+      {
+        name: "조회 실패를 임시 Entity 생성으로 숨김",
+        category: "Service",
+        keywords: ["실패 흐름 은폐", "데이터 정합성", "Optional"],
+        bad: `Order order = orderRepository.findById(request.orderId())
+    .orElse(new Order(request.orderId(), request.userId(), 0));
+
+order.cancel();
+orderRepository.save(order);`,
+        good: `Order order = orderRepository.findById(request.orderId())
+    .orElseThrow(() -> new OrderNotFoundException(request.orderId()));
+
+order.validateOwner(request.userId());
+order.cancel();
+orderRepository.save(order);`,
+        problem: "없는 주문을 새 주문처럼 만들어 정상 흐름으로 진행한다. 데이터 정합성 문제가 장애로 늦게 발견된다.",
+        interview: "조회 실패는 기본 Entity로 숨기지 말고 명확한 실패 흐름으로 처리해야 합니다."
+      },
+      {
+        name: "요청값의 서버 결정 상태 신뢰",
+        category: "DTO / Entity",
+        keywords: ["Parameter Tampering", "DTO 설계", "권한 검증"],
+        bad: `class RefundRequest {
+  public Long paymentId;
+  public Long userId;
+  public int refundAmount;
+  public String status;
+}
+
+payment.status = request.status;
+refundPg(request.refundAmount);`,
+        good: `record RefundRequest(Long paymentId, Long userId, String reason) {}
+
+Payment payment = paymentRepository.findById(request.paymentId())
+    .orElseThrow(PaymentNotFoundException::new);
+payment.validateOwner(request.userId());
+int refundAmount = refundPolicy.calculate(payment);
+payment.cancel(refundAmount);`,
+        problem: "환불 금액과 상태는 서버가 저장된 결제 상태로 결정해야 한다. 클라이언트 입력을 신뢰하면 조작 가능성이 생긴다.",
+        interview: "Request DTO에는 사용자의 의도만 받고, 상태와 금액 같은 서버 결정값은 서버에서 계산해야 합니다."
+      },
+      {
+        name: "@Valid 누락과 도메인 검증 혼동",
+        category: "Controller",
+        keywords: ["@Valid", "Bean Validation", "도메인 검증"],
+        bad: `// @PostMapping("/reservations")
+public ReservationResponse reserve(
+    /* @RequestBody */ ReservationRequest request) {
+  return reservationService.reserve(request);
+}`,
+        good: `// @PostMapping("/reservations")
+public ResponseEntity<ReservationResponse> reserve(
+    /* @Valid @RequestBody */ ReservationRequest request) {
+  ReservationResponse response = reservationService.reserve(request);
+  return ResponseEntity.status(201).body(response);
+}
+
+record ReservationRequest(/* @NotNull */ Long roomId,
+                          /* @Future */ LocalDate date) {}`,
+        problem: "형식 검증이 Controller 경계에서 동작하지 않는다. 단, 소유자/상태 전이 같은 도메인 검증은 Service나 Domain에서 별도로 처리해야 한다.",
+        interview: "DTO 형식 검증은 @Valid로 경계에서 막고, 상태 전이나 소유자 검증은 도메인 규칙으로 분리해야 합니다."
+      },
+      {
+        name: "RuntimeException 무분별 사용",
+        category: "Exception",
+        keywords: ["RuntimeException", "도메인 예외", "공통 예외 처리"],
+        bad: `if (order == null) {
+  throw new RuntimeException("error");
+}
+if (!order.ownerId.equals(userId)) {
+  throw new RuntimeException("error");
+}`,
+        good: `if (order == null) {
+  throw new OrderNotFoundException(orderId);
+}
+if (!order.isOwnedBy(userId)) {
+  throw new OrderAccessDeniedException(orderId, userId);
+}`,
+        problem: "원인과 대응이 다른 실패가 모두 같은 예외와 메시지로 표현된다. HTTP 상태 매핑과 FE/QA 시나리오가 불명확해진다.",
+        interview: "실패 원인에 맞는 도메인 예외와 에러 코드를 사용해야 API 실패 계약을 안정적으로 만들 수 있습니다."
+      },
+      {
+        name: "예외 메시지가 너무 모호함",
+        category: "Exception",
+        keywords: ["에러 코드", "API 계약", "협업"],
+        bad: `throw new CouponException("fail");`,
+        good: `throw new CouponAlreadyUsedException(couponId);
+
+record ErrorResponse(String code, String message) {}
+
+// COUPON_ALREADY_USED -> 409 Conflict`,
+        problem: "fail 같은 메시지는 사용자가 무엇을 고쳐야 하는지, FE/QA가 어떤 케이스를 처리해야 하는지 알기 어렵다.",
+        interview: "예외는 사람이 읽는 메시지뿐 아니라 클라이언트가 분기할 수 있는 에러 코드와 상태코드가 필요합니다."
+      },
+      {
+        name: "Controller catch-all 예외 처리",
+        category: "Controller",
+        keywords: ["ControllerAdvice", "HTTP 상태코드", "예외 매핑"],
+        bad: `try {
+  service.cancel(request);
+  return Map.of("status", 200, "message", "ok");
+} catch (Exception e) {
+  return Map.of("status", 200, "message", e.getMessage());
+}`,
+        good: `// @RestControllerAdvice
+class ApiExceptionHandler {
+  // @ExceptionHandler(OrderNotFoundException.class)
+  ResponseEntity<ErrorResponse> notFound(OrderNotFoundException e) {
+    return ResponseEntity.status(404)
+        .body(new ErrorResponse("ORDER_NOT_FOUND", e.getMessage()));
+  }
+}`,
+        problem: "실패도 200으로 응답하면 클라이언트와 운영 지표가 실패를 감지하기 어렵다.",
+        interview: "Controller에서 모든 예외를 성공 응답으로 감싸지 말고, 공통 예외 처리에서 도메인 예외를 HTTP 상태로 매핑해야 합니다."
+      },
+      {
+        name: "if문 중첩이 많은 코드",
+        category: "Legacy Code",
+        keywords: ["Spaghetti Code", "가독성", "Clean Code"],
+        bad: `if (order != null) {
+  if ("ACTIVE".equals(order.status)) {
+    if (order.amount > 0) {
+      if (!order.expired) {
+        order.cancel();
+      }
+    }
+  }
+}`,
+        good: `if (order == null) {
+  throw new OrderNotFoundException(id);
+}
+order.validateCancelable();
+order.cancel();`,
+        problem: "조건이 깊게 중첩되면 정상 경로와 실패 경로가 잘 보이지 않고, 조건 하나가 추가될 때 유지보수가 어려워진다.",
+        interview: "깊은 중첩은 guard clause와 도메인 검증 메서드로 분리해 실패 조건을 먼저 드러내는 편이 좋습니다."
+      },
+      {
+        name: "Magic Number 사용",
+        category: "Legacy Code",
+        keywords: ["Magic Number", "정책 하드코딩", "가독성"],
+        bad: `int fee = amount < 30000 ? 3000 : 0;
+if (cancelMinutes > 30) {
+  refund = (int) (amount * 0.9);
+}`,
+        good: `private static final int FREE_DELIVERY_MIN_AMOUNT = 30_000;
+private static final int DEFAULT_DELIVERY_FEE = 3_000;
+private static final int CANCEL_LIMIT_MINUTES = 30;
+
+int fee = amount < FREE_DELIVERY_MIN_AMOUNT ? DEFAULT_DELIVERY_FEE : 0;`,
+        problem: "숫자가 어떤 정책을 의미하는지 코드만 보고 알기 어렵다. 정책 변경 시 흩어진 숫자를 찾아야 한다.",
+        interview: "정책 숫자는 이름 있는 상수나 설정으로 분리해 의미와 변경 지점을 명확히 해야 합니다."
+      },
+      {
+        name: "중복 코드",
+        category: "Legacy Code",
+        keywords: ["중복 로직", "Clean Code", "변경 비용"],
+        bad: `if (grade.equals("VIP")) {
+  price = (int) (price * 0.9);
+}
+// another method
+if (grade.equals("VIP")) {
+  total = (int) (total * 0.9);
+}`,
+        good: `class DiscountPolicy {
+  int discount(String grade, int amount) {
+    if ("VIP".equals(grade)) {
+      return (int) (amount * 0.9);
+    }
+    return amount;
+  }
+}`,
+        problem: "같은 정책이 여러 곳에 있으면 변경 누락이 생긴다. 특히 할인율, 상태 전이, 권한 검증 중복은 장애로 이어지기 쉽다.",
+        interview: "반복되는 정책은 한 곳의 Policy나 Domain 메서드로 모아 변경 지점을 줄여야 합니다."
+      },
+      {
+        name: "static mutable list 저장소",
+        category: "Repository",
+        keywords: ["static mutable state", "테스트 격리", "동시성"],
+        bad: `class UserRepository {
+  private static final List<User> users = new ArrayList<>();
+
+  public List<User> findAll() {
+    return users;
+  }
+}`,
+        good: `class UserRepository {
+  private final Map<Long, User> users = new ConcurrentHashMap<>();
+
+  public List<User> findAll() {
+    return List.copyOf(users.values());
+  }
+}`,
+        problem: "static mutable 상태는 테스트 간 데이터가 섞이고 동시 요청에서 일관성이 깨질 수 있다. 내부 컬렉션을 그대로 반환하면 캡슐화도 깨진다.",
+        interview: "공유 mutable 저장소를 그대로 노출하지 말고, 실제 저장소나 테스트용 fake를 분리하고 방어적 복사를 고려해야 합니다."
+      },
+      {
+        name: "Repository findAll 후 애플리케이션 필터링",
+        category: "Repository",
+        keywords: ["조회 성능", "조건 조회", "인덱스"],
+        bad: `List<Order> orders = orderRepository.findAll();
+return orders.stream()
+    .filter(order -> order.userId.equals(userId))
+    .filter(order -> order.status.equals("PAID"))
+    .toList();`,
+        good: `return orderRepository.findPaidOrdersByUserId(userId);
+
+interface OrderRepository {
+  List<Order> findPaidOrdersByUserId(Long userId);
+}`,
+        problem: "목록 전체를 가져와 애플리케이션에서 거르면 데이터가 많아질수록 비용이 커진다. 실제 DB라면 조건 조회, 인덱스, 페이징을 의심해야 한다.",
+        interview: "조회 조건은 가능한 저장소 계층에 명확히 표현하고, 목록 API는 인덱스와 페이징 관점까지 같이 봐야 합니다."
+      },
+      {
+        name: "반복문 안 Repository 조회",
+        category: "Repository",
+        keywords: ["N+1 유사 문제", "반복 조회", "성능"],
+        bad: `for (Long productId : request.productIds()) {
+  Product product = productRepository.findById(productId)
+      .orElseThrow();
+  items.add(new OrderItem(product));
+}`,
+        good: `List<Product> products =
+    productRepository.findAllById(request.productIds());
+
+for (Product product : products) {
+  items.add(new OrderItem(product));
+}`,
+        problem: "반복마다 저장소를 호출하면 데이터 수만큼 조회가 늘어난다. 실제 DB에서는 실행 횟수와 쿼리 계획을 확인해야 한다.",
+        interview: "반복 조회는 일괄 조회로 바꾸고, DB 환경에서는 N+1 또는 과도한 round-trip 가능성을 의심해야 합니다."
+      },
+      {
+        name: "Repository save가 항상 add",
+        category: "Repository",
+        keywords: ["생성/수정 의미 혼동", "데이터 중복", "정합성"],
+        bad: `public DeliveryAddress save(DeliveryAddress address) {
+  addresses.add(address);
+  return address;
+}`,
+        good: `public DeliveryAddress save(DeliveryAddress address) {
+  addresses.put(address.orderId(), address);
+  return address;
+}`,
+        problem: "변경 유스케이스에서도 add만 하면 같은 식별자의 데이터가 여러 개 쌓이고 어떤 값을 읽어야 하는지 불명확해진다.",
+        interview: "save가 생성인지 수정인지 기준을 분명히 하고, 식별자 기준으로 기존 데이터를 갱신해야 합니다."
+      },
+      {
+        name: "System.out.println 로그",
+        category: "Legacy Code",
+        keywords: ["Logging", "Monitoring", "운영 추적"],
+        bad: `System.out.println("refund ok " + userId);
+System.out.println("error " + e.getMessage());`,
+        good: `private static final Logger log =
+    LoggerFactory.getLogger(RefundService.class);
+
+log.info("refund completed. paymentId={}, userId={}", paymentId, userId);
+log.warn("refund rejected. paymentId={}, reason={}", paymentId, reason);`,
+        problem: "표준 출력은 로그 레벨, 구조화 필드, 추적 ID, 수집 시스템 연동이 어렵다. 운영 장애 분석에 필요한 맥락도 부족해진다.",
+        interview: "운영 로그는 Logger로 레벨과 식별자를 남기고, 개인정보와 추적 가능성을 함께 고려해야 합니다."
+      },
+      {
+        name: "Util에 비즈니스 정책과 알림 책임 혼재",
+        category: "Util",
+        keywords: ["Util 책임", "Policy 분리", "테스트 가능성"],
+        bad: `class RefundUtil {
+  static boolean canRefund(Payment payment) {
+    return payment.amount > 0 && !"WEEKEND".equals(today());
+  }
+
+  static void sendNotice(Long userId) {
+    System.out.println("refund notice " + userId);
+  }
+}`,
+        good: `class RefundPolicy {
+  boolean canRefund(Payment payment, LocalDate today) {
+    return payment.isPaid() && !holidayPolicy.isBlocked(today);
+  }
+}
+
+class RefundNotifier {
+  void send(Long userId) {
+    // notify
+  }
+}`,
+        problem: "순수 유틸처럼 보이지만 환불 정책과 알림 부작용이 섞여 있다. 테스트 대체와 정책 변경이 어려워진다.",
+        interview: "순수 계산 유틸이 아니라 정책이나 알림 책임이면 Policy, Validator, Notifier 같은 컴포넌트로 분리해야 합니다."
+      },
+      {
+        name: "DIP 위반: 구현체 직접 생성",
+        category: "SOLID",
+        keywords: ["DIP 위반", "DI", "테스트 대체 어려움"],
+        bad: `class PaymentService {
+  private final PgClient pgClient = new RealPgClient();
+  private final PaymentRepository repository = new PaymentRepository();
+}`,
+        good: `class PaymentService {
+  private final PgClient pgClient;
+  private final PaymentRepository repository;
+
+  PaymentService(PgClient pgClient, PaymentRepository repository) {
+    this.pgClient = pgClient;
+    this.repository = repository;
+  }
+}`,
+        problem: "Service가 구체 구현을 직접 생성하면 테스트에서 fake/mock으로 대체하기 어렵고, 구현 변경이 Service 변경으로 이어진다.",
+        interview: "Service는 구체 구현 생성 책임을 갖지 말고 인터페이스나 추상화에 의존하도록 DI를 사용해야 합니다."
+      },
+      {
+        name: "OCP 위반: 타입별 if/switch 증가",
+        category: "SOLID",
+        keywords: ["OCP 위반", "Strategy", "정책 분리"],
+        bad: `if ("NORMAL".equals(order.type)) {
+  refund = order.amount;
+} else if ("PREORDER".equals(order.type)) {
+  refund = (int) (order.amount * 0.9);
+} else if ("DIGITAL".equals(order.type)) {
+  throw new CannotRefundException();
+}`,
+        good: `interface RefundPolicy {
+  boolean supports(OrderType type);
+  int refundAmount(Order order);
+}
+
+RefundPolicy policy = policies.stream()
+    .filter(p -> p.supports(order.type()))
+    .findFirst()
+    .orElseThrow(UnsupportedOrderTypeException::new);`,
+        problem: "타입이 추가될 때마다 기존 Service if/switch를 수정해야 한다. 정책이 늘수록 변경 영향과 테스트 범위가 커진다.",
+        interview: "타입별 정책이 계속 늘어난다면 Strategy나 Policy 객체로 분리해 확장에는 열리고 수정에는 닫히게 만드는 편이 좋습니다."
+      },
+      {
+        name: "SRP 위반: Service가 모든 일을 처리",
+        category: "SOLID",
+        keywords: ["SRP 위반", "God Object", "Service 책임 과다"],
+        bad: `class OrderService {
+  void order(OrderRequest request) {
+    validate(request);
+    int price = calculate(request);
+    repository.save(new Order(price));
+    emailClient.send(request.email);
+    auditRepository.save("ordered");
+  }
+}`,
+        good: `class OrderService {
+  void order(OrderRequest request) {
+    Order order = orderFactory.create(request);
+    orderRepository.save(order);
+    orderEventPublisher.ordered(order);
+  }
+}`,
+        problem: "검증, 가격 계산, 저장, 알림, 감사 로그가 한 Service에 모여 있다. 변경 이유가 여러 개라 회귀 위험이 커진다.",
+        interview: "Service 유스케이스가 너무 많은 책임을 가지면 정책, 알림, 감사 기록 같은 변경 축을 분리해야 합니다."
+      },
+      {
+        name: "God Object",
+        category: "Legacy Code",
+        keywords: ["God Object", "책임 분리 실패", "Legacy Code"],
+        bad: `class UserManager {
+  void join(UserRequest request) {}
+  void login(String email, String password) {}
+  void sendMail(Long userId) {}
+  void calculatePoint(Long userId) {}
+  void writeAuditLog(String message) {}
+  void exportCsv() {}
+}`,
+        good: `class UserJoinService {}
+class AuthService {}
+class MailService {}
+class PointService {}
+class AuditLogger {}
+class UserReportExporter {}`,
+        problem: "한 클래스가 여러 업무 영역을 모두 알고 처리한다. 수정 이유가 많아지고 테스트 범위가 커진다.",
+        interview: "God Object는 변경 이유가 너무 많은 클래스이므로 유스케이스나 책임 축으로 쪼개야 합니다."
+      },
+      {
+        name: "Spaghetti Code",
+        category: "Legacy Code",
+        keywords: ["Spaghetti Code", "흐름 제어", "유지보수"],
+        bad: `public String process(Request r) {
+  if (r == null) return "A";
+  if (r.type.equals("X")) save(r);
+  else if (r.type.equals("Y")) notify(r);
+  if (r.amount > 0) log(r);
+  if (r.userId == null) return "B";
+  return "OK";
+}`,
+        good: `public ProcessResult process(Request request) {
+  Request validRequest = validator.validate(request);
+  ProcessCommand command = commandFactory.from(validRequest);
+  return command.execute();
+}`,
+        problem: "검증, 분기, 저장, 알림, 반환 코드가 한 흐름에 섞여 의도를 파악하기 어렵다.",
+        interview: "Spaghetti Code는 흐름을 유스케이스 단계와 정책 객체로 나누어 읽을 수 있는 구조로 바꿔야 합니다."
+      },
+      {
+        name: "트랜잭션 위치가 애매한 코드",
+        category: "Service",
+        keywords: ["@Transactional", "Transaction boundary", "상태 변경"],
+        bad: `public void cancel(Long orderId) {
+  Order order = repository.findById(orderId).orElseThrow();
+  order.cancel();
+  repository.save(order);
+}
+
+private void cancelInternal(Order order) {
+  // @Transactional 이 여기에만 있다고 기대
+}`,
+        good: `// @Transactional
+public void cancel(Long orderId) {
+  Order order = repository.findById(orderId).orElseThrow();
+  order.cancel();
+  repository.save(order);
+}`,
+        problem: "상태 변경 유스케이스의 경계가 명확하지 않다. 내부 메서드에만 트랜잭션을 기대하면 Spring AOP 프록시를 거치지 않을 수 있다.",
+        interview: "트랜잭션은 보통 상태 변경 유스케이스의 public Service 경계에 두고, self-invocation 오해를 피해야 합니다."
+      },
+      {
+        name: "트랜잭션 안 외부 호출",
+        category: "Service",
+        keywords: ["외부 호출 순서", "Transaction boundary", "실무 장애"],
+        bad: `// @Transactional
+public void refund(Long paymentId) {
+  Payment payment = repository.findById(paymentId).orElseThrow();
+  pgClient.refund(payment.pgKey());
+  payment.refunded();
+  repository.save(payment);
+}`,
+        good: `// @Transactional
+public RefundCommand markRefundRequested(Long paymentId) {
+  Payment payment = repository.findById(paymentId).orElseThrow();
+  payment.requestRefund();
+  repository.save(payment);
+  return RefundCommand.from(payment);
+}
+
+// transaction 밖 또는 이벤트 처리
+pgClient.refund(command.pgKey());`,
+        problem: "외부 PG 호출 성공 후 DB 저장이 실패하거나, DB 락을 잡은 채 외부 지연이 발생할 수 있다. 호출 순서와 보상 전략을 설명해야 한다.",
+        interview: "외부 호출과 DB 트랜잭션을 섞을 때는 실패 순서, 재시도, 보상 처리까지 고려해야 합니다."
+      },
+      {
+        name: "readOnly 트랜잭션 오해",
+        category: "Service",
+        keywords: ["readOnly", "@Transactional", "조회 전용"],
+        bad: `// @Transactional
+public List<OrderResponse> findOrders(Long userId) {
+  return repository.findByUserId(userId).stream()
+      .map(OrderResponse::from)
+      .toList();
+}`,
+        good: `// @Transactional(readOnly = true)
+public List<OrderResponse> findOrders(Long userId) {
+  return repository.findByUserId(userId).stream()
+      .map(OrderResponse::from)
+      .toList();
+}`,
+        problem: "조회 전용 메서드와 상태 변경 메서드의 트랜잭션 의도가 구분되지 않는다. 단, readOnly가 모든 성능 문제를 해결한다는 식으로 말하면 위험하다.",
+        interview: "조회 전용 유스케이스는 readOnly로 의도를 드러낼 수 있지만, 성능은 조회 조건과 인덱스까지 함께 봐야 합니다."
+      },
+      {
+        name: "문자열 상태값 하드코딩",
+        category: "DTO / Entity",
+        keywords: ["문자열 상태값", "Enum", "상태 전이"],
+        bad: `if ("WAIT".equals(order.status)) {
+  order.status = "PAID";
+}
+if ("CANCEL".equals(request.status)) {
+  order.status = "CANCELED";
+}`,
+        good: `enum OrderStatus {
+  WAIT, PAID, CANCELED;
+
+  boolean canPay() {
+    return this == WAIT;
+  }
+}`,
+        problem: "오타와 허용되지 않는 상태가 런타임까지 숨어 있을 수 있다. 상태 전이 규칙도 흩어진 if문에 묻힌다.",
+        interview: "상태값은 enum과 상태 전이 메서드로 표현해 허용 상태와 전이 규칙을 코드에 드러내는 편이 안전합니다."
+      },
+      {
+        name: "public field Entity",
+        category: "DTO / Entity",
+        keywords: ["캡슐화", "Entity responsibility", "Anemic Domain Model"],
+        bad: `class Order {
+  public Long id;
+  public String status;
+  public int amount;
+}
+
+order.status = "CANCELED";
+order.amount = 0;`,
+        good: `class Order {
+  private OrderStatus status;
+  private int amount;
+
+  void cancel() {
+    if (!status.canCancel()) {
+      throw new InvalidOrderStatusException();
+    }
+    this.status = OrderStatus.CANCELED;
+  }
+}`,
+        problem: "외부에서 Entity 상태를 마음대로 바꾸면 도메인 규칙을 통제할 수 없다.",
+        interview: "Entity 상태 변경은 메서드로 감싸 불변 조건과 상태 전이 규칙을 지키도록 해야 합니다."
+      },
+      {
+        name: "테스트가 실행되지 않거나 검증이 없음",
+        category: "Test",
+        keywords: ["JUnit", "assertion 부족", "실패 케이스 누락"],
+        bad: `class OrderServiceTest {
+  public void cancel_success() {
+    service.cancel(1L);
+  }
+}`,
+        good: `class OrderServiceTest {
+  // @Test
+  void cancel_success() {
+    Order order = service.cancel(1L);
+    assertThat(order.status()).isEqualTo(OrderStatus.CANCELED);
+  }
+
+  // @Test
+  void cancel_rejects_not_owner() {
+    assertThatThrownBy(() -> service.cancel(1L, 99L))
+        .isInstanceOf(OrderAccessDeniedException.class);
+  }
+}`,
+        problem: "@Test가 없거나 assertion이 없으면 실제로 동작을 고정하지 못한다. 성공 케이스만 있으면 권한/상태 실패가 누락된다.",
+        interview: "테스트는 실행 가능해야 하고, 성공뿐 아니라 조회 실패, 권한 실패, 상태 불가 같은 핵심 실패 케이스를 고정해야 합니다."
+      },
+      {
+        name: "시간값 직접 호출로 테스트 어려움",
+        category: "Test",
+        keywords: ["LocalDateTime.now", "Clock", "테스트 가능성"],
+        bad: `boolean expired(Coupon coupon) {
+  return LocalDateTime.now().isAfter(coupon.expiredAt);
+}`,
+        good: `class CouponPolicy {
+  private final Clock clock;
+
+  boolean expired(Coupon coupon) {
+    return LocalDateTime.now(clock).isAfter(coupon.expiredAt());
+  }
+}`,
+        problem: "현재 시간을 직접 호출하면 만료/취소 가능 시간 테스트가 실행 시점에 따라 흔들린다.",
+        interview: "시간 기준 정책은 Clock 같은 의존성을 주입해 테스트에서 고정할 수 있게 만드는 편이 좋습니다."
+      },
+      {
+        name: "API 응답을 Map으로 구성",
+        category: "Controller",
+        keywords: ["Map<String,Object>", "Response DTO", "API 계약"],
+        bad: `return Map.of(
+    "status", 200,
+    "result", order,
+    "message", "ok"
+);`,
+        good: `record OrderResponse(Long orderId, String status) {}
+
+return ResponseEntity.ok(
+    new OrderResponse(order.id(), order.status().name())
+);`,
+        problem: "Map 응답은 빠르게 만들 수 있지만 필드 스펙이 코드 타입으로 고정되지 않아 FE/QA와 API 계약이 불명확해진다.",
+        interview: "운영 API 응답은 Map보다 명시적인 Response DTO로 계약을 드러내는 것이 안전합니다."
+      },
+      {
+        name: "ResponseEntity를 Service에서 반환",
+        category: "Service",
+        keywords: ["HTTP 책임 침범", "계층 분리", "ResponseEntity"],
+        bad: `class OrderService {
+  public ResponseEntity<?> cancel(Long id) {
+    if (id == null) {
+      return ResponseEntity.badRequest().body("bad");
+    }
+    return ResponseEntity.ok("ok");
+  }
+}`,
+        good: `class OrderService {
+  public OrderCancelResult cancel(Long id) {
+    if (id == null) {
+      throw new InvalidOrderRequestException();
+    }
+    return new OrderCancelResult(id);
+  }
+}
+
+class OrderController {
+  ResponseEntity<OrderCancelResponse> cancel(Long id) {
+    return ResponseEntity.ok(OrderCancelResponse.from(service.cancel(id)));
+  }
+}`,
+        problem: "Service가 HTTP 상태와 응답 본문을 만들면 웹 계층에 종속되고 재사용/테스트가 어려워진다.",
+        interview: "ResponseEntity는 Controller의 HTTP 응답 표현이고, Service는 도메인 결과나 예외를 반환하는 편이 좋습니다."
+      },
+      {
+        name: "리팩토링 우선순위 없이 전부 고치려 함",
+        category: "Legacy Code",
+        keywords: ["리팩토링 우선순위", "면접 답변", "Legacy Refactoring"],
+        bad: `// 문제를 본 뒤 답변
+"전부 DTO로 바꾸고, 전부 enum으로 바꾸고,
+전부 인터페이스로 나누고, 테스트도 전부 작성하겠습니다."`,
+        good: `// 면접 답변
+"먼저 장애 가능성이 큰 입력 검증, 권한 검증,
+트랜잭션/외부 호출 순서를 고정하겠습니다.
+그 다음 DTO/Entity 분리와 정책 객체 분리를 진행하겠습니다."`,
+        problem: "레거시 코드에서 모든 문제를 한 번에 고치겠다고 하면 위험도가 크다. 먼저 장애와 데이터 정합성에 직결되는 부분을 골라야 한다.",
+        interview: "면접에서는 모든 개선을 나열하기보다 먼저 고칠 2~3개와 그 이유를 우선순위로 설명해야 합니다."
+      },
+      {
+        name: "Mapper 변환 책임이 Controller에 몰림",
+        category: "DTO / Entity",
+        keywords: ["Mapper", "DTO 변환", "Controller 책임"],
+        bad: `// @PostMapping("/payments")
+public PaymentResponse pay(PaymentRequest request) {
+  Payment payment = new Payment();
+  payment.userId = request.userId;
+  payment.amount = request.amount;
+  payment.status = "READY";
+  Payment saved = paymentService.pay(payment);
+  return new PaymentResponse(saved.id, saved.status);
+}`,
+        good: `// @PostMapping("/payments")
+public PaymentResponse pay(/* @Valid @RequestBody */ PaymentRequest request) {
+  PaymentResult result = paymentService.pay(request);
+  return PaymentResponse.from(result);
+}
+
+class PaymentService {
+  PaymentResult pay(PaymentRequest request) {
+    Payment payment = Payment.create(request.userId(), request.amount());
+    return PaymentResult.from(paymentRepository.save(payment));
+  }
+}`,
+        problem: "Controller가 Entity 생성과 상태 초기화까지 담당한다. 변환 책임이 계층 경계를 흐리게 만들고, 서버 결정값 초기화가 HTTP 계층에 새어 나온다.",
+        interview: "Controller는 요청 DTO를 Service로 전달하고, Entity 생성과 서버 결정값 초기화는 Service나 Domain factory에서 처리하는 편이 좋습니다."
+      },
+      {
+        name: "record DTO를 무조건 정답처럼 사용",
+        category: "DTO / Entity",
+        keywords: ["Java record", "DTO 설계", "Validation"],
+        bad: `record UserUpdateRequest(
+    Long userId,
+    String role,
+    String status,
+    LocalDateTime createdAt
+) {}`,
+        good: `record UserUpdateRequest(
+    /* @NotBlank */ String nickname
+) {}
+
+class UserService {
+  void update(Long userId, UserUpdateRequest request) {
+    User user = userRepository.findById(userId).orElseThrow();
+    user.changeNickname(request.nickname());
+  }
+}`,
+        problem: "record 자체는 불변 DTO에 적합하지만, 서버가 결정해야 할 role, status, createdAt까지 Request에 넣으면 입력 신뢰 문제가 생긴다.",
+        interview: "record는 DTO 표현 방식일 뿐이고, 어떤 필드를 외부 입력으로 받을지와 검증 책임을 먼저 판단해야 합니다."
+      },
+      {
+        name: "Optional을 필드나 파라미터로 사용",
+        category: "Service",
+        keywords: ["Optional 필드", "Optional 파라미터", "API 설계"],
+        bad: `class SearchRequest {
+  public Optional<String> keyword;
+}
+
+public List<Order> search(Optional<Long> userId) {
+  return repository.search(userId);
+}`,
+        good: `record SearchRequest(String keyword) {}
+
+public List<Order> search(Long userId) {
+  if (userId == null) {
+    return repository.findRecent();
+  }
+  return repository.findByUserId(userId);
+}`,
+        problem: "Optional은 반환값에서 부재 가능성을 표현하는 용도에 가깝다. 필드나 파라미터에 쓰면 직렬화, 호출부, 검증이 복잡해진다.",
+        interview: "Optional은 주로 반환 타입에서 조회 실패 가능성을 드러내고, DTO 필드나 파라미터에는 신중하게 사용해야 합니다."
+      },
+      {
+        name: "Optional<List<T>>로 빈 목록과 실패 혼동",
+        category: "Repository",
+        keywords: ["Optional<List>", "빈 목록", "조회 의미"],
+        bad: `Optional<List<Order>> findByUserId(Long userId);
+
+List<Order> orders = repository.findByUserId(userId)
+    .orElseThrow(() -> new OrderNotFoundException());`,
+        good: `List<Order> findByUserId(Long userId);
+
+List<Order> orders = repository.findByUserId(userId);
+// 주문이 없으면 빈 목록을 반환`,
+        problem: "목록 조회에서 결과가 없는 것은 보통 실패가 아니라 빈 목록이다. Optional<List>는 빈 목록과 조회 실패 의미를 혼동시킬 수 있다.",
+        interview: "단건 조회는 Optional이 자연스럽지만, 목록 조회는 보통 빈 List로 결과 없음 상태를 표현합니다."
+      },
+      {
+        name: "Map 사용이 항상 나쁘다고 단정",
+        category: "Controller",
+        keywords: ["Map 트레이드오프", "API 계약", "운영 코드"],
+        bad: `// 운영 API 응답
+return Map.of("a", 1, "b", order, "ok", true);`,
+        good: `// 운영 API는 명시 DTO
+record OrderResponse(Long id, String status) {}
+
+// 내부 로그/임시 속성은 Map도 가능
+Map<String, Object> attributes = Map.of(
+    "orderId", order.id(),
+    "status", order.status()
+);`,
+        problem: "운영 API 응답에서 Map은 계약이 약하지만, 내부 로그나 임시 속성 전달에서는 실용적일 수 있다. 맥락 없이 무조건 나쁘다고 말하면 단정적이다.",
+        interview: "외부 API 계약은 DTO가 안전하고, 내부 임시 데이터나 로그 속성은 Map을 쓸 수 있어 맥락을 구분해야 합니다."
+      },
+      {
+        name: "권한/소유자 검증 누락",
+        category: "Service",
+        keywords: ["권한 검증", "소유자 검증", "요청 userId 신뢰"],
+        bad: `public Order cancel(CancelRequest request) {
+  Order order = orderRepository.findById(request.orderId())
+      .orElseThrow();
+  order.cancel();
+  return orderRepository.save(order);
+}`,
+        good: `public Order cancel(CancelRequest request) {
+  Order order = orderRepository.findById(request.orderId())
+      .orElseThrow();
+  order.validateOwner(request.userId());
+  order.cancel();
+  return orderRepository.save(order);
+}`,
+        problem: "요청한 userId와 저장된 주문 소유자를 비교하지 않으면 다른 사용자의 주문을 취소할 수 있다.",
+        interview: "상태 변경 유스케이스에서는 요청 사용자를 그대로 믿지 말고 저장된 ownerId와 비교해 권한을 검증해야 합니다."
+      },
+      {
+        name: "중복 요청에 대한 idempotency 부재",
+        category: "Service",
+        keywords: ["동시성", "idempotency", "중복 요청"],
+        bad: `public void pay(PayRequest request) {
+  pgClient.pay(request.paymentKey(), request.amount());
+  paymentRepository.save(new Payment(request.orderId(), "PAID"));
+}`,
+        good: `public void pay(PayRequest request) {
+  if (paymentRepository.existsByRequestKey(request.requestKey())) {
+    return;
+  }
+  pgClient.pay(request.paymentKey(), request.amount());
+  paymentRepository.save(Payment.paid(request.orderId(), request.requestKey()));
+}`,
+        problem: "네트워크 재시도나 더블클릭으로 같은 요청이 여러 번 들어오면 결제나 상태 변경이 중복될 수 있다.",
+        interview: "결제나 취소처럼 부작용이 큰 유스케이스는 요청 식별자와 상태 확인으로 중복 요청을 방지해야 합니다."
+      },
+      {
+        name: "Exception 400/404/409 구분 없음",
+        category: "Exception",
+        keywords: ["400 404 409", "ErrorCode", "ControllerAdvice"],
+        bad: `if (request.amount() <= 0) {
+  throw new RuntimeException("fail");
+}
+if (order == null) {
+  throw new RuntimeException("fail");
+}
+if (order.cancelled()) {
+  throw new RuntimeException("fail");
+}`,
+        good: `if (request.amount() <= 0) {
+  throw new InvalidOrderRequestException(); // 400
+}
+if (order == null) {
+  throw new OrderNotFoundException(); // 404
+}
+if (order.cancelled()) {
+  throw new OrderAlreadyCancelledException(); // 409
+}`,
+        problem: "입력 오류, 리소스 없음, 상태 충돌은 클라이언트 대응이 다르다. 모두 같은 예외로 처리하면 API 계약이 약해진다.",
+        interview: "실패 원인에 따라 400, 404, 409를 구분하고 공통 예외 처리에서 일관된 ErrorResponse로 매핑해야 합니다."
+      },
+      {
+        name: "Test에서 외부 의존성을 대체하지 못함",
+        category: "Test",
+        keywords: ["fake", "mock", "외부 의존성", "테스트 격리"],
+        bad: `class RefundServiceTest {
+  // @Test
+  void refund() {
+    RefundService service =
+        new RefundService(new RealPgClient(), new RefundRepository());
+    service.refund(1L);
+  }
+}`,
+        good: `class RefundServiceTest {
+  // @Test
+  void refund() {
+    FakePgClient pgClient = new FakePgClient();
+    RefundService service =
+        new RefundService(pgClient, new FakeRefundRepository());
+    service.refund(1L);
+    assertThat(pgClient.requested()).isTrue();
+  }
+}`,
+        problem: "테스트가 실제 외부 PG나 실제 저장소에 의존하면 느리고 불안정하며 실패 원인을 분리하기 어렵다.",
+        interview: "외부 의존성은 DI로 주입하고 테스트에서는 fake나 mock으로 대체해 유스케이스 동작만 검증해야 합니다."
+      },
+      {
+        name: "Util이 Validator, Policy, Notifier를 모두 담당",
+        category: "Util",
+        keywords: ["Util 책임 과다", "Policy 분리", "SRP 위반"],
+        bad: `class OrderUtil {
+  static boolean valid(Order order) { return order.amount > 0; }
+  static int fee(Order order) { return order.amount > 30000 ? 0 : 3000; }
+  static void notify(Long userId) { System.out.println(userId); }
+}`,
+        good: `class OrderValidator {
+  void validate(Order order) { /* 검증 */ }
+}
+class DeliveryFeePolicy {
+  int calculate(Order order) { /* 배송비 정책 */ return 0; }
+}
+class OrderNotifier {
+  void notify(Long userId) { /* 알림 */ }
+}`,
+        problem: "Util이라는 이름 아래 검증, 정책 계산, 알림 부작용이 섞여 있다. 변경 이유가 달라 테스트와 유지보수가 어려워진다.",
+        interview: "순수 유틸이 아니라 정책이나 알림 책임이면 Validator, Policy, Notifier 같은 컴포넌트로 분리해야 합니다."
+      },
+      {
+        name: "Util에서 현재 시간과 랜덤값 직접 사용",
+        category: "Util",
+        keywords: ["테스트 가능성", "Clock", "Random", "static Util"],
+        bad: `class CouponUtil {
+  static boolean expired(Coupon coupon) {
+    return LocalDateTime.now().isAfter(coupon.expiredAt);
+  }
+
+  static String issueCode() {
+    return "CP-" + new Random().nextInt(1000);
+  }
+}`,
+        good: `class CouponPolicy {
+  private final Clock clock;
+  private final CodeGenerator codeGenerator;
+
+  boolean expired(Coupon coupon) {
+    return LocalDateTime.now(clock).isAfter(coupon.expiredAt());
+  }
+}`,
+        problem: "시간과 랜덤값을 직접 호출하면 테스트가 실행 시점에 따라 흔들리고 재현이 어렵다.",
+        interview: "시간, 랜덤, 외부 호출처럼 변하는 값은 의존성으로 주입해 테스트에서 고정할 수 있게 해야 합니다."
+      },
+      {
+        name: "공통 Util에 여러 도메인 정책이 섞임",
+        category: "Util",
+        keywords: ["공통 Util 남용", "도메인 정책 혼재", "변경 영향"],
+        bad: `class CommonUtil {
+  static boolean canRefund(Payment p) { return p.amount > 0; }
+  static boolean canCancel(Order o) { return "READY".equals(o.status); }
+  static boolean canUseCoupon(Coupon c) { return !c.used; }
+}`,
+        good: `class RefundPolicy { boolean canRefund(Payment p) { return p.isPaid(); } }
+class OrderCancelPolicy { boolean canCancel(Order o) { return o.isReady(); } }
+class CouponUsePolicy { boolean canUse(Coupon c) { return c.isUsable(); } }`,
+        problem: "공통 Util에 여러 도메인의 정책이 모이면 한 도메인 변경이 다른 도메인 코드에 영향을 주기 쉽다.",
+        interview: "공통이라는 이름으로 도메인 정책을 섞기보다 각 도메인의 Policy로 분리하는 편이 안전합니다."
+      },
+      {
+        name: "self-invocation으로 @Transactional 미적용",
+        category: "AOP",
+        keywords: ["self-invocation", "@Transactional", "Spring AOP"],
+        bad: `// @Service
+class OrderService {
+  public void cancel(Long id) {
+    validate(id);
+    cancelInternal(id);
+  }
+
+  // @Transactional
+  public void cancelInternal(Long id) {
+    orderRepository.saveCanceled(id);
+  }
+}`,
+        good: `// @Service
+class OrderService {
+  // @Transactional
+  public void cancel(Long id) {
+    validate(id);
+    orderRepository.saveCanceled(id);
+  }
+}`,
+        problem: "같은 클래스 내부 호출은 Spring 프록시를 거치지 않기 때문에 내부 메서드의 AOP 어노테이션이 기대대로 적용되지 않을 수 있다.",
+        interview: "Spring AOP는 프록시 기반이므로 트랜잭션은 외부에서 호출되는 public Service 유스케이스 경계에 두는 것이 안전합니다."
+      },
+      {
+        name: "@Async를 내부 호출에 기대함",
+        category: "AOP",
+        keywords: ["@Async", "self-invocation", "비동기 오해"],
+        bad: `// @Service
+class MailService {
+  public void join(User user) {
+    save(user);
+    sendWelcomeMail(user.email());
+  }
+
+  // @Async
+  public void sendWelcomeMail(String email) {
+    mailClient.send(email);
+  }
+}`,
+        good: `// @Service
+class JoinService {
+  private final WelcomeMailSender sender;
+
+  public void join(User user) {
+    save(user);
+    sender.sendWelcomeMail(user.email());
+  }
+}`,
+        problem: "같은 클래스 내부에서 @Async 메서드를 호출하면 프록시를 거치지 않아 비동기로 동작하지 않을 수 있다.",
+        interview: "@Async, Cache, Transaction 같은 AOP 기반 기능은 내부 호출이 아니라 프록시를 거치는 구조인지 확인해야 합니다."
+      },
+      {
+        name: "Filter / Interceptor / AOP 책임 경계 혼동",
+        category: "AOP",
+        keywords: ["Filter", "Interceptor", "AOP", "공통 처리"],
+        bad: `// Filter에서 주문 소유자 검증까지 처리
+public void doFilter(req, res, chain) {
+  Long orderId = Long.valueOf(req.getParameter("orderId"));
+  if (!orderRepository.isOwner(orderId, currentUserId())) {
+    throw new RuntimeException("denied");
+  }
+  chain.doFilter(req, res);
+}`,
+        good: `// Filter: 인증 토큰 파싱
+// Interceptor: 컨트롤러 진입 전 공통 웹 정책
+// Service/Domain: 주문 소유자와 상태 검증
+order.validateOwner(currentUserId);
+order.cancel();`,
+        problem: "웹 공통 계층에서 도메인 소유자 검증까지 처리하면 계층 책임이 섞이고 테스트/재사용이 어려워진다.",
+        interview: "Filter는 서블릿 전역, Interceptor는 MVC 요청 전후, AOP는 관심사 분리, 도메인 권한 검증은 Service/Domain 경계에서 보는 식으로 책임을 구분해야 합니다."
+      },
+      {
+        name: "ISP 위반: 너무 큰 인터페이스",
+        category: "SOLID",
+        keywords: ["ISP 위반", "Interface Segregation", "불필요한 의존"],
+        bad: `interface UserPort {
+  User find(Long id);
+  void save(User user);
+  void sendMail(User user);
+  void exportCsv();
+}
+
+class LoginService {
+  private final UserPort userPort; // find만 필요
+}`,
+        good: `interface UserReader { User find(Long id); }
+interface UserWriter { void save(User user); }
+interface UserMailer { void sendMail(User user); }
+
+class LoginService {
+  private final UserReader userReader;
+}`,
+        problem: "클라이언트가 쓰지 않는 메서드까지 의존하게 되면 구현체와 테스트 대역이 불필요하게 커진다.",
+        interview: "인터페이스는 사용하는 클라이언트 기준으로 작게 나눠 불필요한 의존을 줄여야 합니다."
+      },
+      {
+        name: "LSP 위반: 하위 타입이 부모 계약을 깨뜨림",
+        category: "SOLID",
+        keywords: ["LSP 위반", "상속 오용", "계약 위반"],
+        bad: `class Coupon {
+  int discount(int amount) { return amount / 10; }
+}
+
+class DisabledCoupon extends Coupon {
+  int discount(int amount) {
+    throw new UnsupportedOperationException();
+  }
+}`,
+        good: `interface DiscountPolicy {
+  boolean supports(Coupon coupon);
+  int discount(Coupon coupon, int amount);
+}
+
+class DisabledCouponPolicy implements DiscountPolicy {
+  public int discount(Coupon coupon, int amount) { return 0; }
+}`,
+        problem: "부모 타입으로 사용할 수 있어야 하는데 특정 하위 타입이 예외를 던져 계약을 깨뜨린다.",
+        interview: "상속을 쓸 때는 하위 타입이 부모 타입의 기대 동작을 깨지 않는지 봐야 하고, 정책 분리가 더 나은 경우가 많습니다."
+      },
+      {
+        name: "인덱스를 타기 어려운 조건 조회",
+        category: "RDBMS",
+        keywords: ["인덱스", "실행계획", "LIKE", "조건 조회"],
+        bad: `// Repository
+List<Order> search(String keyword) {
+  return jdbc.query("""
+      select * from orders
+      where lower(customer_name) like '%' || ? || '%'
+      order by created_at desc
+      """, keyword);
+}`,
+        good: `// 검색 요구가 크면 별도 검색 전략 검토
+// 일반 목록은 인덱스 가능한 조건을 우선
+select * from orders
+where user_id = ?
+  and status = ?
+  and created_at between ? and ?
+order by created_at desc
+limit ? offset ?`,
+        problem: "함수 적용과 앞쪽 와일드카드 검색은 일반 인덱스를 활용하기 어렵다. 데이터가 많아지면 실행계획과 응답 시간이 나빠질 수 있다.",
+        interview: "목록/검색 API는 조건, 정렬, 페이징, 인덱스 사용 가능성을 함께 보고 실행계획을 확인해야 합니다."
+      },
+      {
+        name: "페이징 없이 전체 목록 반환",
+        category: "RDBMS",
+        keywords: ["페이징", "정렬", "실행계획", "목록 API"],
+        bad: `// @GetMapping("/orders")
+public List<OrderResponse> findAll() {
+  return orderRepository.findAll().stream()
+      .map(OrderResponse::from)
+      .toList();
+}`,
+        good: `// @GetMapping("/orders")
+public Page<OrderResponse> findOrders(OrderSearchCondition condition,
+                                      Pageable pageable) {
+  return orderRepository.search(condition, pageable)
+      .map(OrderResponse::from);
+}`,
+        problem: "전체 목록을 한 번에 반환하면 데이터 증가 시 메모리와 응답 시간이 커지고 정렬 기준도 불명확해진다.",
+        interview: "목록 API는 조건 조회, 정렬, 페이징을 기본으로 보고 필요한 인덱스와 실행계획을 함께 확인해야 합니다."
+      },
+      {
+        name: "JPA N+1 조회",
+        category: "JPA / QueryDSL",
+        keywords: ["JPA", "N+1", "fetch join"],
+        bad: `List<Order> orders = orderRepository.findAll();
+for (Order order : orders) {
+  System.out.println(order.getUser().getName());
+}`,
+        good: `// JPQL 예시
+select o from Order o
+join fetch o.user
+where o.status = :status`,
+        problem: "주문 목록 조회 후 각 주문의 연관 User를 지연 로딩하면 주문 수만큼 추가 쿼리가 발생할 수 있다.",
+        interview: "JPA 목록 조회에서는 연관 엔티티 접근으로 N+1이 생기는지 보고, fetch join이나 batch size 등 조회 전략을 검토해야 합니다."
+      },
+      {
+        name: "JPA Entity를 API 응답으로 직접 반환",
+        category: "JPA / QueryDSL",
+        keywords: ["JPA Entity", "Lazy Loading", "DTO Projection"],
+        bad: `// @GetMapping("/orders/{id}")
+public Order find(Long id) {
+  return orderRepository.findById(id).orElseThrow();
+}`,
+        good: `// @GetMapping("/orders/{id}")
+public OrderResponse find(Long id) {
+  Order order = orderRepository.findById(id).orElseThrow();
+  return OrderResponse.from(order);
+}`,
+        problem: "JPA Entity를 그대로 반환하면 지연 로딩, 순환 참조, 내부 필드 노출, API 계약 결합 문제가 생길 수 있다.",
+        interview: "JPA Entity는 영속 모델이고 API 응답은 외부 계약이므로 Response DTO나 projection으로 분리하는 편이 안전합니다."
+      },
+      {
+        name: "QueryDSL 동적 조건에서 null 처리 혼동",
+        category: "JPA / QueryDSL",
+        keywords: ["QueryDSL", "동적 쿼리", "조건 조립"],
+        bad: `BooleanExpression condition =
+    order.userId.eq(userId)
+        .and(order.status.eq(status))
+        .and(order.keyword.contains(keyword));`,
+        good: `BooleanExpression statusEq(OrderStatus status) {
+  return status == null ? null : order.status.eq(status);
+}
+
+BooleanExpression keywordContains(String keyword) {
+  return hasText(keyword) ? order.memo.contains(keyword) : null;
+}`,
+        problem: "검색 조건이 null일 수 있는데 그대로 eq/contains를 호출하면 NPE가 나거나 의도하지 않은 조건이 붙을 수 있다.",
+        interview: "동적 쿼리는 조건 생성 메서드를 작게 나누고 null 조건을 명확히 제외해 검색 의도를 드러내야 합니다."
+      },
+      {
+        name: "Liquibase 변경 이력 없이 스키마 수동 변경",
+        category: "JPA / QueryDSL",
+        keywords: ["Liquibase", "Schema Migration", "운영 배포"],
+        bad: `// 운영 DB에서 직접 실행
+alter table orders add column cancel_reason varchar(255);
+
+// 코드에는 변경 이유와 순서가 남지 않음`,
+        good: `--liquibase formatted sql
+-- db/changelog/2026-06-30-add-cancel-reason.sql
+-- changeset sujin:add-cancel-reason
+alter table orders add column cancel_reason varchar(255);
+-- rollback alter table orders drop column cancel_reason;`,
+        problem: "스키마 변경을 수동으로 하면 환경별 DB 상태가 달라지고 배포/롤백 이력이 남지 않는다.",
+        interview: "운영 스키마 변경은 Liquibase 같은 마이그레이션 도구로 변경 이력, 순서, 롤백 전략을 관리해야 합니다."
+      }
+    ];
+
+    const filterRoot = document.getElementById("filters");
+    const cardsRoot = document.getElementById("cards");
+    const searchInput = document.getElementById("searchInput");
+    const count = document.getElementById("count");
+    const empty = document.getElementById("empty");
+    let selectedCategory = "All";
+
+    function escapeHtml(value) {
+      return value
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
+    }
+
+    function highlightJava(value) {
+      const escaped = escapeHtml(value);
+      const placeholders = [];
+      const hold = (html) => {
+        const key = `@@TOKEN_${placeholders.length}@@`;
+        placeholders.push(html);
+        return key;
+      };
+
+      let highlighted = escaped
+        .replace(/(\/\/[^\n]*)/g, (match) => hold(`<span class="tok-comment">${match}</span>`))
+        .replace(/(&quot;.*?&quot;|".*?")/g, (match) => hold(`<span class="tok-string">${match}</span>`))
+        .replace(/\b(@[A-Za-z_][A-Za-z0-9_]*)\b/g, '<span class="tok-anno">$1</span>')
+        .replace(/\b(class|interface|enum|record|public|private|protected|static|final|void|return|new|if|else|for|while|try|catch|throw|throws|extends|implements|null|true|false|this)\b/g, '<span class="tok-keyword">$1</span>')
+        .replace(/\b(String|Long|Integer|Optional|List|Map|ResponseEntity|LocalDate|LocalDateTime|Clock|RuntimeException|Exception)\b/g, '<span class="tok-type">$1</span>')
+        .replace(/\b(\d[\d_]*)\b/g, '<span class="tok-number">$1</span>');
+
+      placeholders.forEach((html, index) => {
+        highlighted = highlighted.replace(`@@TOKEN_${index}@@`, html);
+      });
+
+      return highlighted;
+    }
+
+    function renderFilters() {
+      filterRoot.innerHTML = categories.map(category => `
+        <button class="filter-btn ${category === selectedCategory ? "active" : ""}"
+                data-category="${category}">
+          ${category}
+        </button>
+      `).join("");
+
+      filterRoot.querySelectorAll("button").forEach(button => {
+        button.addEventListener("click", () => {
+          selectedCategory = button.dataset.category;
+          render();
+        });
+      });
+    }
+
+    function matches(card, query) {
+      const source = [
+        card.name,
+        card.category,
+        card.keywords.join(" "),
+        card.problem,
+        card.interview,
+        card.bad,
+        card.good
+      ].join(" ").toLowerCase();
+      return source.includes(query.toLowerCase());
+    }
+
+    function renderCards(filtered) {
+      cardsRoot.innerHTML = filtered.map(card => `
+        <article class="card">
+          <div class="card-head">
+            <div class="card-title-row">
+              <h2>${escapeHtml(card.name)}</h2>
+              <span class="category">${escapeHtml(card.category)}</span>
+            </div>
+            <div class="tags">
+              ${card.keywords.map(keyword => `<span class="tag">${escapeHtml(keyword)}</span>`).join("")}
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="compare">
+              <section class="code-box bad">
+                <div class="code-label">잘못된 코드</div>
+                <pre><code>${highlightJava(card.bad)}</code></pre>
+              </section>
+              <section class="code-box good">
+                <div class="code-label">리팩토링된 코드</div>
+                <pre><code>${highlightJava(card.good)}</code></pre>
+              </section>
+            </div>
+            <p class="problem"><strong>무엇이 문제인지:</strong> ${escapeHtml(card.problem)}</p>
+            <p class="interview">${escapeHtml(card.interview)}</p>
+          </div>
+        </article>
+      `).join("");
+    }
+
+    function render() {
+      const query = searchInput.value.trim();
+      const filtered = cards.filter(card => {
+        const categoryMatched = selectedCategory === "All" || card.category === selectedCategory;
+        const queryMatched = query.length === 0 || matches(card, query);
+        return categoryMatched && queryMatched;
+      });
+
+      renderFilters();
+      renderCards(filtered);
+      count.textContent = `${filtered.length} / ${cards.length}개 표시`;
+      empty.style.display = filtered.length === 0 ? "block" : "none";
+    }
+
+    searchInput.addEventListener("input", render);
+    render();
+  </script>
+</body>
+</html>
