@@ -288,9 +288,128 @@
       background: var(--panel);
     }
 
+    .tabbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    .tab-btn {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 10px 14px;
+      cursor: pointer;
+      font-weight: 800;
+      font-size: 14px;
+    }
+
+    .tab-btn.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    .flow-hero,
+    .flow-section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 18px;
+      margin-bottom: 18px;
+    }
+
+    .flow-hero h2,
+    .flow-section h2,
+    .flow-section h3 {
+      margin: 0 0 10px;
+    }
+
+    .flow-line {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 12px 0 0;
+    }
+
+    .flow-chip {
+      border: 1px solid #c9d7ff;
+      background: #f4f7ff;
+      color: #244174;
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-weight: 800;
+      font-size: 13px;
+    }
+
+    .tips-grid,
+    .flow-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .tip-card,
+    .flow-step {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      background: #fbfcff;
+    }
+
+    .tip-card h3,
+    .flow-step h3 {
+      font-size: 16px;
+      margin: 0 0 8px;
+    }
+
+    .tip-card ul,
+    .flow-step ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .tip-card li,
+    .flow-step li {
+      margin: 5px 0;
+    }
+
+    .flow-step.warn {
+      border-color: var(--bad-line);
+      background: var(--bad-bg);
+    }
+
+    .flow-step.ok {
+      border-color: var(--good-line);
+      background: var(--good-bg);
+    }
+
+    .flow-relation {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .flow-relation .code-box {
+      background: #fff;
+    }
+
     @media (max-width: 980px) {
       .grid,
-      .compare {
+      .compare,
+      .tips-grid,
+      .flow-grid {
         grid-template-columns: 1fr;
       }
 
@@ -326,8 +445,85 @@
 
   <main>
     <div class="shell">
-      <section id="cards" class="grid" aria-live="polite"></section>
-      <div id="empty" class="empty">검색 조건에 맞는 카드가 없습니다.</div>
+      <nav class="tabbar" aria-label="학습 탭">
+        <button class="tab-btn active" data-tab="cardsPanel">카드 복습</button>
+        <button class="tab-btn" data-tab="flowPanel">전체 코드 흐름 연습</button>
+      </nav>
+
+      <section id="cardsPanel" class="tab-panel active">
+        <section id="cards" class="grid" aria-live="polite"></section>
+        <div id="empty" class="empty">검색 조건에 맞는 카드가 없습니다.</div>
+      </section>
+
+      <section id="flowPanel" class="tab-panel" aria-label="전체 코드 흐름 연습">
+        <section class="flow-hero">
+          <h2>면접 코드 흐름은 이 순서로 먼저 본다</h2>
+          <p class="subtitle">
+            안티패턴 이름을 먼저 외우기보다, 짧은 레거시 코드가 어떤 순서로 흘러가는지 따라가며 위험 지점을 찾는 연습 탭입니다.
+          </p>
+          <div class="flow-line">
+            <span class="flow-chip">입력값</span>
+            <span class="flow-chip">조회</span>
+            <span class="flow-chip">검증</span>
+            <span class="flow-chip">계산</span>
+            <span class="flow-chip">외부 호출</span>
+            <span class="flow-chip">저장</span>
+            <span class="flow-chip">결과 반환</span>
+          </div>
+        </section>
+
+        <section class="flow-section">
+          <h2>계층별 빠른 체크 팁</h2>
+          <div class="tips-grid" id="layerTips"></div>
+        </section>
+
+        <section class="flow-section">
+          <h2>006 Order Cancel 전체 관계</h2>
+          <div class="flow-relation" id="flowRelation"></div>
+        </section>
+
+        <section class="flow-section">
+          <h2>안티패턴으로 판단하는 기준</h2>
+          <div class="tips-grid">
+            <article class="tip-card">
+              <h3>높음</h3>
+              <ul>
+                <li>Entity를 API 응답으로 직접 반환한다.</li>
+                <li>조회 실패를 임시 Entity 생성으로 숨긴다.</li>
+                <li>클라이언트가 보낸 금액/상태를 서버 결정값처럼 믿는다.</li>
+                <li>외부 PG 호출을 먼저 하고 DB 저장 실패 가능성을 방치한다.</li>
+              </ul>
+            </article>
+            <article class="tip-card">
+              <h3>상황 의존</h3>
+              <ul>
+                <li>Service의 if 분기는 작을 때는 허용되지만, 타입/정책이 늘어나면 OCP 위반 후보가 된다.</li>
+                <li>조회 실패 표현은 Optional, null, 예외, 빈 객체, 빈 목록 등 여러 방식이 있다. 표현 자체보다 Service 흐름에서 실패를 숨기는지가 중요하다.</li>
+                <li>Map은 API 응답 계약에는 부적절하지만, 내부 임시 속성이나 로그 맥락에는 사용할 수 있다.</li>
+                <li>Builder는 생성에는 좋지만 기존 Entity 상태 전이를 대신하는 정답은 아니다.</li>
+              </ul>
+            </article>
+          </div>
+        </section>
+
+        <section class="flow-section">
+          <h2>23번 매트릭스와 공통 개념 연결</h2>
+          <div class="tips-grid" id="conceptCoverage"></div>
+        </section>
+
+        <section class="flow-section">
+          <h2>흐름 단계별 문제 찾기</h2>
+          <div class="flow-grid" id="flowSteps"></div>
+        </section>
+
+        <section class="flow-section">
+          <h2>면접에서 말하는 순서</h2>
+          <pre><code>먼저 전체 요청 흐름을 Controller -> Service -> Repository -> Util 순서로 보겠습니다.
+그 다음 입력값 -> 조회 -> 검증 -> 계산 -> 외부 호출 -> 저장 -> 결과 반환 순서로 따라가며,
+클라이언트 요청값을 신뢰하는지, 조회 실패를 숨기는지, 외부 호출과 DB 저장 순서가 안전한지,
+마지막 응답이 Entity인지 Response DTO인지 확인하겠습니다.</code></pre>
+        </section>
+      </section>
     </div>
   </main>
 
@@ -353,11 +549,11 @@
         name: "Controller에 비즈니스 로직 집중",
         category: "Controller",
         keywords: ["Controller 책임 과다", "SRP 위반", "Service 책임 누락"],
-        bad: `// @RestController
+        bad: `@RestController
 class CouponController {
   private final CouponRepository repo = new CouponRepository();
 
-  // @PostMapping("/coupons/use")
+  @PostMapping("/coupons/use")
   public String use(CouponUseRequest request) {
     Coupon coupon = repo.findByCode(request.code);
     if (coupon == null || coupon.expired) {
@@ -368,7 +564,7 @@ class CouponController {
     return "ok";
   }
 }`,
-        good: `// @RestController
+        good: `@RestController
 class CouponController {
   private final CouponService service;
 
@@ -385,7 +581,7 @@ class CouponController {
         name: "Service 없이 Controller에서 검증과 계산 수행",
         category: "Controller",
         keywords: ["계층 책임", "Validation", "Transaction Script"],
-        bad: `// @PostMapping("/orders")
+        bad: `@PostMapping("/orders")
 public Map<String, Object> order(OrderRequest request) {
   if (request.amount <= 0) {
     return Map.of("status", 400);
@@ -397,7 +593,7 @@ public Map<String, Object> order(OrderRequest request) {
   orderRepository.save(new Order(request.userId, finalPrice));
   return Map.of("status", 200);
 }`,
-        good: `// @PostMapping("/orders")
+        good: `@PostMapping("/orders")
 public ResponseEntity<OrderResponse> order(
     /* @Valid @RequestBody */ OrderRequest request) {
   OrderResponse response = orderService.order(request);
@@ -410,7 +606,7 @@ public ResponseEntity<OrderResponse> order(
         name: "Controller가 Entity를 그대로 응답",
         category: "DTO / Entity",
         keywords: ["Entity 직접 노출", "DTO/Entity 분리 실패", "API 계약"],
-        bad: `// @GetMapping("/users/{id}")
+        bad: `@GetMapping("/users/{id}")
 public User find(Long id) {
   return userService.find(id);
 }
@@ -421,7 +617,7 @@ class User {
   public String passwordHash;
   public boolean admin;
 }`,
-        good: `// @GetMapping("/users/{id}")
+        good: `@GetMapping("/users/{id}")
 public UserResponse find(Long id) {
   User user = userService.find(id);
   return new UserResponse(user.id(), user.email());
@@ -459,7 +655,7 @@ record UserResponse(Long id, String email) {}`,
       {
         name: "Repository가 null 반환",
         category: "Repository",
-        keywords: ["null 처리", "Optional", "NPE 위험"],
+        keywords: ["null 처리", "조회 실패", "NPE 위험"],
         bad: `class OrderRepository {
   public Order findById(Long id) {
     for (Order order : orders) {
@@ -482,6 +678,85 @@ Order order = repository.findById(id)
     .orElseThrow(() -> new OrderNotFoundException(id));`,
         problem: "조회 실패 가능성이 타입에 드러나지 않아 호출부가 null 처리를 놓치기 쉽다.",
         interview: "조회 실패가 가능한 Repository 메서드는 Optional이나 명확한 예외 흐름으로 실패 가능성을 드러내야 합니다."
+      },
+      {
+        name: "조회 실패를 빈 객체로 반환",
+        category: "Repository",
+        keywords: ["빈 객체", "기본값", "조회 실패 은폐"],
+        bad: `class OrderRepository {
+  public Order findById(Long id) {
+    return store.getOrDefault(id, Order.empty());
+  }
+}
+
+Order order = orderRepository.findById(request.orderId());
+order.cancel();`,
+        good: `class OrderRepository {
+  public Optional<Order> findById(Long id) {
+    return Optional.ofNullable(store.get(id));
+  }
+}
+
+Order order = orderRepository.findById(request.orderId())
+    .orElseThrow(() -> new OrderNotFoundException(request.orderId()));`,
+        problem: "없는 주문을 빈 객체로 바꾸면 Service는 조회 성공처럼 계속 진행한다. 실패가 빠르게 드러나지 않고 상태 변경/저장 단계에서 데이터 정합성 문제가 생긴다.",
+        interview: "조회 실패는 빈 객체나 기본값으로 숨기기보다, 유스케이스 의미에 맞게 예외나 명확한 실패 결과로 중단해야 합니다."
+      },
+      {
+        name: "Repository가 예외를 직접 던져 흐름을 숨김",
+        category: "Repository",
+        keywords: ["예외 위치", "조회 실패", "계층 책임"],
+        bad: `class OrderRepository {
+  public Order findById(Long id) {
+    Order order = store.get(id);
+    if (order == null) {
+      throw new OrderNotFoundException(id);
+    }
+    return order;
+  }
+}`,
+        good: `class OrderRepository {
+  public Optional<Order> findById(Long id) {
+    return Optional.ofNullable(store.get(id));
+  }
+}
+
+class OrderService {
+  public Order cancel(Long id) {
+    Order order = orderRepository.findById(id)
+        .orElseThrow(() -> new OrderNotFoundException(id));
+    order.cancel();
+    return orderRepository.save(order);
+  }
+}`,
+        problem: "Repository가 무조건 도메인 예외를 던지면 같은 조회 메서드를 다른 유스케이스에서 재사용하기 어렵다. 조회 실패를 어떻게 해석할지는 보통 Service 유스케이스가 결정한다.",
+        interview: "Repository는 값 없음 가능성을 표현하고, Service가 취소/조회/수정 유스케이스에 맞게 404, 빈 결과, 생성 등의 의미를 결정하는 편이 유연합니다."
+      },
+      {
+        name: "목록 조회에서 null 반환",
+        category: "Repository",
+        keywords: ["빈 목록", "null List", "조회 결과 의미"],
+        bad: `class OrderRepository {
+  public List<Order> findByUserId(Long userId) {
+    List<Order> result = query(userId);
+    return result.isEmpty() ? null : result;
+  }
+}
+
+for (Order order : orderRepository.findByUserId(userId)) {
+  order.markViewed();
+}`,
+        good: `class OrderRepository {
+  public List<Order> findByUserId(Long userId) {
+    return query(userId); // 없으면 빈 List
+  }
+}
+
+for (Order order : orderRepository.findByUserId(userId)) {
+  order.markViewed();
+}`,
+        problem: "목록 조회에서 결과 없음은 보통 실패가 아니라 빈 결과다. null을 반환하면 호출부마다 방어 코드가 필요하고 반복문에서 NPE가 발생하기 쉽다.",
+        interview: "단건 조회의 값 없음과 목록 조회의 빈 결과는 의미가 다릅니다. 목록은 보통 빈 List로 반환해 흐름을 단순하게 유지합니다."
       },
       {
         name: "Optional.get 직접 호출",
@@ -557,12 +832,12 @@ payment.cancel(refundAmount);`,
         name: "@Valid 누락과 도메인 검증 혼동",
         category: "Controller",
         keywords: ["@Valid", "Bean Validation", "도메인 검증"],
-        bad: `// @PostMapping("/reservations")
+        bad: `@PostMapping("/reservations")
 public ReservationResponse reserve(
     /* @RequestBody */ ReservationRequest request) {
   return reservationService.reserve(request);
 }`,
-        good: `// @PostMapping("/reservations")
+        good: `@PostMapping("/reservations")
 public ResponseEntity<ReservationResponse> reserve(
     /* @Valid @RequestBody */ ReservationRequest request) {
   ReservationResponse response = reservationService.reserve(request);
@@ -616,9 +891,9 @@ record ErrorResponse(String code, String message) {}
 } catch (Exception e) {
   return Map.of("status", 200, "message", e.getMessage());
 }`,
-        good: `// @RestControllerAdvice
+        good: `@RestControllerAdvice
 class ApiExceptionHandler {
-  // @ExceptionHandler(OrderNotFoundException.class)
+  @ExceptionHandler(OrderNotFoundException.class)
   ResponseEntity<ErrorResponse> notFound(OrderNotFoundException e) {
     return ResponseEntity.status(404)
         .body(new ErrorResponse("ORDER_NOT_FOUND", e.getMessage()));
@@ -918,7 +1193,7 @@ class UserReportExporter {}`,
 private void cancelInternal(Order order) {
   // @Transactional 이 여기에만 있다고 기대
 }`,
-        good: `// @Transactional
+        good: `@Transactional
 public void cancel(Long orderId) {
   Order order = repository.findById(orderId).orElseThrow();
   order.cancel();
@@ -931,14 +1206,14 @@ public void cancel(Long orderId) {
         name: "트랜잭션 안 외부 호출",
         category: "Service",
         keywords: ["외부 호출 순서", "Transaction boundary", "실무 장애"],
-        bad: `// @Transactional
+        bad: `@Transactional
 public void refund(Long paymentId) {
   Payment payment = repository.findById(paymentId).orElseThrow();
   pgClient.refund(payment.pgKey());
   payment.refunded();
   repository.save(payment);
 }`,
-        good: `// @Transactional
+        good: `@Transactional
 public RefundCommand markRefundRequested(Long paymentId) {
   Payment payment = repository.findById(paymentId).orElseThrow();
   payment.requestRefund();
@@ -958,13 +1233,13 @@ refundService.markRefundCompleted(command.paymentId());
         name: "readOnly 트랜잭션 오해",
         category: "Service",
         keywords: ["readOnly", "@Transactional", "조회 전용"],
-        bad: `// @Transactional
+        bad: `@Transactional
 public List<OrderResponse> findOrders(Long userId) {
   return repository.findByUserId(userId).stream()
       .map(OrderResponse::from)
       .toList();
 }`,
-        good: `// @Transactional(readOnly = true)
+        good: `@Transactional(readOnly = true)
 public List<OrderResponse> findOrders(Long userId) {
   return repository.findByUserId(userId).stream()
       .map(OrderResponse::from)
@@ -1029,13 +1304,13 @@ order.amount = 0;`,
   }
 }`,
         good: `class OrderServiceTest {
-  // @Test
+  @Test
   void cancel_success() {
     Order order = service.cancel(1L);
     assertThat(order.status()).isEqualTo(OrderStatus.CANCELED);
   }
 
-  // @Test
+  @Test
   void cancel_rejects_not_owner() {
     assertThatThrownBy(() -> service.cancel(1L, 99L))
         .isInstanceOf(OrderAccessDeniedException.class);
@@ -1125,7 +1400,7 @@ class OrderController {
         name: "Mapper 변환 책임이 Controller에 몰림",
         category: "DTO / Entity",
         keywords: ["Mapper", "DTO 변환", "Controller 책임"],
-        bad: `// @PostMapping("/payments")
+        bad: `@PostMapping("/payments")
 public PaymentResponse pay(PaymentRequest request) {
   Payment payment = new Payment();
   payment.userId = request.userId;
@@ -1134,7 +1409,7 @@ public PaymentResponse pay(PaymentRequest request) {
   Payment saved = paymentService.pay(payment);
   return new PaymentResponse(saved.id, saved.status);
 }`,
-        good: `// @PostMapping("/payments")
+        good: `@PostMapping("/payments")
 public PaymentResponse pay(/* @Valid @RequestBody */ PaymentRequest request) {
   PaymentResult result = paymentService.pay(request);
   return PaymentResponse.from(result);
@@ -1300,7 +1575,7 @@ if (order.cancelled()) {
         category: "Test",
         keywords: ["fake", "mock", "외부 의존성", "테스트 격리"],
         bad: `class RefundServiceTest {
-  // @Test
+  @Test
   void refund() {
     RefundService service =
         new RefundService(new RealPgClient(), new RefundRepository());
@@ -1308,7 +1583,7 @@ if (order.cancelled()) {
   }
 }`,
         good: `class RefundServiceTest {
-  // @Test
+  @Test
   void refund() {
     FakePgClient pgClient = new FakePgClient();
     RefundService service =
@@ -1384,21 +1659,21 @@ class CouponUsePolicy { boolean canUse(Coupon c) { return c.isUsable(); } }`,
         name: "self-invocation으로 @Transactional 미적용",
         category: "AOP",
         keywords: ["self-invocation", "@Transactional", "Spring AOP"],
-        bad: `// @Service
+        bad: `@Service
 class OrderService {
   public void cancel(Long id) {
     validate(id);
     cancelInternal(id);
   }
 
-  // @Transactional
+  @Transactional
   public void cancelInternal(Long id) {
     orderRepository.saveCanceled(id);
   }
 }`,
-        good: `// @Service
+        good: `@Service
 class OrderService {
-  // @Transactional
+  @Transactional
   public void cancel(Long id) {
     validate(id);
     orderRepository.saveCanceled(id);
@@ -1411,19 +1686,19 @@ class OrderService {
         name: "@Async를 내부 호출에 기대함",
         category: "AOP",
         keywords: ["@Async", "self-invocation", "비동기 오해"],
-        bad: `// @Service
+        bad: `@Service
 class MailService {
   public void join(User user) {
     save(user);
     sendWelcomeMail(user.email());
   }
 
-  // @Async
+  @Async
   public void sendWelcomeMail(String email) {
     mailClient.send(email);
   }
 }`,
-        good: `// @Service
+        good: `@Service
 class JoinService {
   private final WelcomeMailSender sender;
 
@@ -1530,13 +1805,13 @@ limit ? offset ?`,
         name: "페이징 없이 전체 목록 반환",
         category: "RDBMS",
         keywords: ["페이징", "정렬", "실행계획", "목록 API"],
-        bad: `// @GetMapping("/orders")
+        bad: `@GetMapping("/orders")
 public List<OrderResponse> findAll() {
   return orderRepository.findAll().stream()
       .map(OrderResponse::from)
       .toList();
 }`,
-        good: `// @GetMapping("/orders")
+        good: `@GetMapping("/orders")
 public Page<OrderResponse> findOrders(OrderSearchCondition condition,
                                       Pageable pageable) {
   return orderRepository.search(condition, pageable)
@@ -1564,11 +1839,11 @@ where o.status = :status`,
         name: "JPA Entity를 API 응답으로 직접 반환",
         category: "JPA / QueryDSL",
         keywords: ["JPA Entity", "Lazy Loading", "DTO Projection"],
-        bad: `// @GetMapping("/orders/{id}")
+        bad: `@GetMapping("/orders/{id}")
 public Order find(Long id) {
   return orderRepository.findById(id).orElseThrow();
 }`,
-        good: `// @GetMapping("/orders/{id}")
+        good: `@GetMapping("/orders/{id}")
 public OrderResponse find(Long id) {
   Order order = orderRepository.findById(id).orElseThrow();
   return OrderResponse.from(order);
@@ -1617,11 +1892,279 @@ alter table orders add column cancel_reason varchar(255);
       }
     ];
 
+    const layerTips = [
+      {
+        layer: "Controller",
+        tips: [
+          "먼저 HTTP 어노테이션, 요청 DTO, 응답 타입을 한 줄로 본다.",
+          "Controller가 얇아 보여도 상태코드, 헤더, 응답 DTO가 맞는지 확인한다.",
+          "요청 DTO를 그대로 Service에 넘기는지 본다.",
+          "응답이 Entity인지 Response DTO인지 먼저 확인한다.",
+          "성공/실패 HTTP 상태코드 기준이 보이는지 본다.",
+          "Controller가 Service 결과를 다시 임의로 Map/String으로 감싸는지 본다.",
+          "try-catch로 모든 실패를 200 응답으로 바꾸지 않는지 확인한다.",
+          "비즈니스 판단, 계산, 저장을 직접 하지 않는지 본다.",
+          "@Valid가 필요한 요청인데 경계 검증이 빠졌는지 본다."
+        ]
+      },
+      {
+        layer: "Service",
+        tips: [
+          "입력값 -> 조회 -> 검증 -> 계산 -> 외부 호출 -> 저장 -> 결과 반환 순서로 읽는다.",
+          "Request DTO의 금액, 상태, userId를 서버 상태처럼 신뢰하는지 본다.",
+          "Repository 조회 실패를 null, 빈 객체, 기본값, 빈 목록으로 숨기는지 확인한다.",
+          "조회 실패를 예외로 중단할지, 빈 결과로 반환할지 유스케이스 기준으로 판단하는지 본다.",
+          "도메인 예외가 ErrorCode/HTTP 매핑까지 이어지는지 본다.",
+          "상태 변경이 Entity 메서드로 캡슐화되어 있는지 본다.",
+          "분기 if/switch가 타입 추가 때 계속 수정될 구조인지 본다.",
+          "외부 PG/API 호출이 DB 저장 전후 어디에 있는지 확인한다.",
+          "LocalDateTime.now(), static Util, 직접 new 때문에 테스트가 어려운지 본다."
+        ]
+      },
+      {
+        layer: "Repository",
+        tips: [
+          "단건 조회 실패를 null, Optional, 예외, 빈 객체 중 무엇으로 표현하는지 본다.",
+          "표현 방식 자체보다 Service가 그 결과를 어떻게 해석하는지 따라간다.",
+          "목록 조회에서 null을 반환하는지, 빈 List를 반환하는지 구분한다.",
+          "save가 생성/수정 의미를 구분하는지 확인한다.",
+          "List.add만 해서 같은 id가 중복 저장되지 않는지 본다.",
+          "findAll 결과를 그대로 노출하거나 Service에서 필터링하지 않는지 확인한다.",
+          "Repository 안에 상태 전이 가능 여부, 할인 가능 여부 같은 정책 판단이 들어갔는지 본다."
+        ]
+      },
+      {
+        layer: "Util / 외부 의존성",
+        tips: [
+          "순수 변환 유틸인지, 도메인 정책/외부 호출까지 맡는지 구분한다.",
+          "static 외부 호출 때문에 테스트 fake/mock 대체가 어려운지 본다.",
+          "PG/API/알림 호출이 트랜잭션 안에서 오래 DB 커넥션을 잡지 않는지 확인한다.",
+          "실패 시 재시도, 실패 상태, 보상 처리 여지가 있는지 본다."
+        ]
+      },
+      {
+        layer: "DTO / Entity",
+        tips: [
+          "Request DTO는 사용자의 의도만 담는지 본다.",
+          "Response DTO는 서버 처리 결과만 필요한 만큼 담는지 확인한다.",
+          "Request에 status, amount, role, createdAt처럼 서버가 정할 값이 들어갔는지 본다.",
+          "DTO 형식 검증과 Entity 상태 전이 검증을 같은 것으로 착각하지 않는지 본다.",
+          "Entity public field를 Service가 직접 바꾸는지 본다.",
+          "Builder는 새 객체 생성용, 기존 Entity 상태 전이는 cancel/change 같은 메서드로 표현한다.",
+          "Response DTO가 내부 필드나 Lazy Loading 관계를 과하게 노출하는지 본다."
+        ]
+      },
+      {
+        layer: "Test",
+        tips: [
+          "테스트가 실제로 실행되는 형태인지 본다.",
+          "성공 호출만 있고 assertion이 없는지 확인한다.",
+          "조회 실패, 이미 취소됨, 권한 실패, 외부 API 실패 같은 실패 케이스가 있는지 본다.",
+          "static 저장소, now(), 외부 API 때문에 테스트가 흔들리지 않는지 확인한다."
+        ]
+      }
+    ];
+
+    const flowRelation = [
+      {
+        label: "1. Controller",
+        code: `@RestController
+class OrderCancelController {
+  @PostMapping("/cancel")
+  public OrderCancelResponse cancelOrder(
+      @Valid @RequestBody OrderCancelRequest request) {
+    Order order = orderService.cancel(request);
+    return OrderCancelResponse.from(order);
+  }
+}`,
+        note: "요청 DTO를 받고 Service 결과를 Response DTO로 변환한다. Entity 직접 반환 여부를 먼저 본다."
+      },
+      {
+        label: "2. Request DTO",
+        code: `class OrderCancelRequest {
+  Long orderId;
+  Long userId;
+  String reason;
+  Integer requestedRefundAmount;
+  String requestedStatus;
+}`,
+        note: "requestedRefundAmount, requestedStatus처럼 서버가 결정해야 할 값이 요청에 있는지 의심한다."
+      },
+      {
+        label: "3. Service 조회/검증/계산",
+        code: `Order order = orderRepository.findById(request.orderId)
+    .orElseThrow(() -> new OrderCancelException(ORDER_NOT_FOUND));
+
+int refundAmount = calculateRefundAmount(order, request);`,
+        note: "조회 실패를 예외로 중단하는지, 환불 금액을 요청값이 아니라 서버 정책으로 계산하는지 본다."
+      },
+      {
+        label: "4. 외부 호출과 저장",
+        code: `order.requestCancel(request.reason);
+orderRepository.save(order);
+
+OrderCancelUtil.requestExternalPgRefund(order.id, refundAmount);
+
+order.completeCancel(LocalDateTime.now());
+orderRepository.save(order);`,
+        note: "@Transactional은 DB만 롤백한다. 외부 PG 호출은 DB 저장 순서와 실패 상태 기록을 함께 봐야 한다."
+      },
+      {
+        label: "5. Repository",
+        code: `// 단건 조회 실패 표현은 여러 방식으로 나온다.
+Order findById(Long id);              // null 가능성이 숨어 있음
+Optional<Order> findById(Long id);    // 값 없음이 타입에 드러남
+Order getByIdOrThrow(Long id);        // 예외 정책이 Repository에 고정됨
+Order findOrEmpty(Long id);           // 실패를 빈 객체로 숨길 수 있음
+
+void save(Order order) {
+  orders.add(order); // 수정인데 add만 하면 중복 저장
+}`,
+        note: "Optional만 정답처럼 외우지 않는다. null, 예외, 빈 객체, 빈 목록 중 무엇이 나오든 Service 흐름에서 실패를 숨기는지 본다."
+      },
+      {
+        label: "6. Entity",
+        code: `class Order {
+  void requestCancel(String reason) { ... }
+  void completeCancel(LocalDateTime cancelledAt) { ... }
+}`,
+        note: "Service가 public field를 직접 바꾸지 않고 Entity 상태 전이 메서드로 묶는지 본다."
+      }
+    ];
+
+    const conceptCoverage = [
+      {
+        concept: "Controller / HTTP 계약",
+        points: [
+          "RestController, Mapping, RequestBody, Valid가 실제 요청 경계에 보이는지 본다.",
+          "응답이 Entity, Map, String인지 Response DTO인지 확인한다.",
+          "성공 200/204와 실패 400/404/409 기준이 ControllerAdvice까지 이어지는지 본다.",
+          "Controller에서 DTO -> Entity 변환이나 Mapper 책임을 과하게 떠안는지 본다."
+        ]
+      },
+      {
+        concept: "Service / 유스케이스 흐름",
+        points: [
+          "입력값 -> 조회 -> 검증 -> 계산 -> 외부 호출 -> 저장 -> 결과 반환 순서로 따라간다.",
+          "요청값 신뢰, 조회 실패 은폐, 상태 전이 누락, 외부 호출 순서가 핵심 위험 지점이다.",
+          "Service가 ResponseEntity나 Map을 만들면 HTTP 책임 침범 후보로 본다.",
+          "Repository, Policy, Client를 직접 new 하면 DIP 위반과 테스트 어려움으로 본다."
+        ]
+      },
+      {
+        concept: "Repository / 조회 실패 표현",
+        points: [
+          "Optional뿐 아니라 null, 예외, 빈 객체, 빈 목록, findAll 후 필터링까지 같이 본다.",
+          "Repository가 정책 판단을 하는지, Service가 조회 결과를 유스케이스 의미로 해석하는지 구분한다.",
+          "save가 add인지 put인지, 생성/수정/중복 기준이 있는지 확인한다."
+        ]
+      },
+      {
+        concept: "DTO / Entity / Validation",
+        points: [
+          "Request DTO에 서버 결정값(status, amount, role, time)이 들어왔는지 본다.",
+          "Entity를 API 응답으로 직접 반환하거나 public field로 직접 변경하는지 본다.",
+          "Bean Validation은 형식 검증이고, 소유자/상태/기간 검증은 Service/Domain 규칙으로 본다."
+        ]
+      },
+      {
+        concept: "Exception / Transaction / External API",
+        points: [
+          "RuntimeException 문자열, ErrorCode 없는 예외, 실패를 200으로 감싸는 코드를 찾는다.",
+          "@Transactional은 DB 롤백만 보장하고 PG/API 호출은 되돌리지 못한다.",
+          "외부 호출 전후에 실패 상태 저장, 재시도, 보상 처리 여지가 있는지 본다.",
+          "self-invocation 때문에 @Transactional, @Async 같은 AOP가 적용되지 않는 구조인지 본다."
+        ]
+      },
+      {
+        concept: "SOLID / Test / 운영",
+        points: [
+          "SRP는 계층 책임, OCP는 늘어나는 if/switch, DIP는 직접 new와 테스트 대체 가능성으로 본다.",
+          "테스트는 @Test, assertion, 실패 케이스, fake/mock 대체 가능성을 확인한다.",
+          "로그, 개인정보 노출, API 계약 변경 영향, 리팩토링 우선순위까지 면접 답변에 연결한다.",
+          "Java record, ISP/LSP는 무조건 정답처럼 외우기보다 코드 맥락이 나올 때 꼬리질문으로 연결한다."
+        ]
+      }
+    ];
+
+    const flowSteps = [
+      {
+        step: "입력값",
+        status: "warn",
+        checks: [
+          "requestedRefundAmount를 클라이언트가 보내면 환불 금액 조작 위험이 있다.",
+          "requestedStatus를 요청값으로 믿으면 저장된 주문 상태 검증이 흔들린다.",
+          "request.userId는 저장된 order.userId와 비교해야 한다."
+        ]
+      },
+      {
+        step: "조회",
+        status: "warn",
+        checks: [
+          "Repository가 null, Optional.empty, 예외, 빈 객체 중 무엇을 반환하는지 본다.",
+          "Optional.empty 자체는 정상 신호일 수 있고, null/빈 객체는 실패를 숨길 위험이 크다.",
+          "Service에서 조회 실패를 임시 Entity, 기본값, 빈 응답으로 바꿔 정상 흐름처럼 진행하는지 확인한다.",
+          "없으면 ORDER_NOT_FOUND로 중단할지, 목록이면 빈 List로 반환할지 유스케이스 기준으로 판단한다."
+        ]
+      },
+      {
+        step: "검증",
+        status: "warn",
+        checks: [
+          "이미 취소된 주문인지 저장된 order.status 기준으로 본다.",
+          "취소 가능 시간은 서버 시간/정책 기준으로 판단한다.",
+          "소유자 검증이 빠지면 다른 사용자의 주문을 취소할 수 있다."
+        ]
+      },
+      {
+        step: "계산",
+        status: "warn",
+        checks: [
+          "환불 금액은 request가 아니라 order.amount와 서버 정책으로 계산한다.",
+          "NORMAL/PREORDER/DIGITAL if가 늘어나면 OCP 위반 후보가 된다.",
+          "간단하면 enum, 커지면 Policy/Strategy 분리를 고려한다."
+        ]
+      },
+      {
+        step: "외부 호출",
+        status: "warn",
+        checks: [
+          "PG/API 호출은 DB 트랜잭션으로 롤백되지 않는다.",
+          "외부 호출이 DB 저장 전인지 후인지 본다.",
+          "실무에서는 이벤트/큐/outbox, 재시도, 실패 상태 기록을 고려한다."
+        ]
+      },
+      {
+        step: "저장",
+        status: "warn",
+        checks: [
+          "Entity 상태 변경이 한 메서드로 묶였는지 본다.",
+          "Repository save가 add만 하면 같은 id가 중복 저장될 수 있다.",
+          "CANCEL_REQUESTED -> CANCELLED처럼 중간 상태가 필요한지 본다."
+        ]
+      },
+      {
+        step: "결과 반환",
+        status: "ok",
+        checks: [
+          "Controller 응답은 Entity가 아니라 Response DTO인지 본다.",
+          "성공 바디가 있으면 200, 바디가 없으면 204를 고려한다.",
+          "실패는 400/404/409 기준이 분리되는지 본다."
+        ]
+      }
+    ];
+
     const filterRoot = document.getElementById("filters");
     const cardsRoot = document.getElementById("cards");
     const searchInput = document.getElementById("searchInput");
     const count = document.getElementById("count");
     const empty = document.getElementById("empty");
+    const tabButtons = document.querySelectorAll(".tab-btn");
+    const tabPanels = document.querySelectorAll(".tab-panel");
+    const layerTipsRoot = document.getElementById("layerTips");
+    const flowRelationRoot = document.getElementById("flowRelation");
+    const conceptCoverageRoot = document.getElementById("conceptCoverage");
+    const flowStepsRoot = document.getElementById("flowSteps");
     let selectedCategory = "All";
 
     function escapeHtml(value) {
@@ -1714,6 +2257,61 @@ alter table orders add column cancel_reason varchar(255);
       `).join("");
     }
 
+    function renderLayerTips() {
+      layerTipsRoot.innerHTML = layerTips.map(item => `
+        <article class="tip-card">
+          <h3>${escapeHtml(item.layer)}</h3>
+          <ul>
+            ${item.tips.map(tip => `<li>${escapeHtml(tip)}</li>`).join("")}
+          </ul>
+        </article>
+      `).join("");
+    }
+
+    function renderFlowRelation() {
+      flowRelationRoot.innerHTML = flowRelation.map(item => `
+        <article class="flow-step">
+          <h3>${escapeHtml(item.label)}</h3>
+          <section class="code-box good">
+            <div class="code-label">관계 코드</div>
+            <pre><code>${highlightJava(item.code)}</code></pre>
+          </section>
+          <p class="problem"><strong>봐야 할 지점:</strong> ${escapeHtml(item.note)}</p>
+        </article>
+      `).join("");
+    }
+
+    function renderConceptCoverage() {
+      conceptCoverageRoot.innerHTML = conceptCoverage.map(item => `
+        <article class="tip-card">
+          <h3>${escapeHtml(item.concept)}</h3>
+          <ul>
+            ${item.points.map(point => `<li>${escapeHtml(point)}</li>`).join("")}
+          </ul>
+        </article>
+      `).join("");
+    }
+
+    function renderFlowSteps() {
+      flowStepsRoot.innerHTML = flowSteps.map(item => `
+        <article class="flow-step ${item.status}">
+          <h3>${escapeHtml(item.step)}</h3>
+          <ul>
+            ${item.checks.map(check => `<li>${escapeHtml(check)}</li>`).join("")}
+          </ul>
+        </article>
+      `).join("");
+    }
+
+    function switchTab(tabId) {
+      tabButtons.forEach(button => {
+        button.classList.toggle("active", button.dataset.tab === tabId);
+      });
+      tabPanels.forEach(panel => {
+        panel.classList.toggle("active", panel.id === tabId);
+      });
+    }
+
     function render() {
       const query = searchInput.value.trim();
       const filtered = cards.filter(card => {
@@ -1729,6 +2327,13 @@ alter table orders add column cancel_reason varchar(255);
     }
 
     searchInput.addEventListener("input", render);
+    tabButtons.forEach(button => {
+      button.addEventListener("click", () => switchTab(button.dataset.tab));
+    });
+    renderLayerTips();
+    renderFlowRelation();
+    renderConceptCoverage();
+    renderFlowSteps();
     render();
   </script>
 </body>
