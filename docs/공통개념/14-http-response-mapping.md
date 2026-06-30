@@ -129,3 +129,112 @@ public PointRefundResponse getRefund(@PathVariable Long id) {
 | 생성/수정/삭제 등 상태코드 제어 필요 | `ResponseEntity<응답DTO>` |
 | 단순 조회, 항상 200 OK | `응답DTO`만 반환해도 OK |
 | Entity, 문자열, Map 반환 | ❌ 절대 안 됨 |
+
+---
+
+## 5. 200, 204, 400, 404, 409 구분 기준
+
+Controller는 단순히 객체를 반환하는 곳이 아니라, 요청 처리 결과를 HTTP 응답으로 매핑하는 계층입니다.
+따라서 성공/실패 상황별로 상태코드 기준이 있어야 합니다.
+
+| 상황 | 예시 | 권장 상태코드 |
+|------|------|--------------|
+| 처리 성공 + 응답 바디 있음 | 주문 취소 후 취소 결과 DTO 반환 | `200 OK` |
+| 처리 성공 + 응답 바디 없음 | 삭제/취소 성공 후 내려줄 데이터 없음 | `204 No Content` |
+| 요청 형식이나 입력값이 잘못됨 | 필수값 누락, 음수 금액, 형식 오류 | `400 Bad Request` |
+| 대상 리소스를 찾을 수 없음 | 존재하지 않는 주문 ID | `404 Not Found` |
+| 리소스의 현재 상태와 충돌 | 이미 취소된 주문, 취소 불가 상태 | `409 Conflict` |
+
+### 주문 취소 API에 적용하면
+
+```java
+// 성공: 취소 결과를 내려주면 200
+return ResponseEntity.ok(OrderCancelResponse.from(order));
+
+// 성공: 내려줄 바디가 없다면 204
+return ResponseEntity.noContent().build();
+
+// 실패 예시
+// request.orderId == null        -> 400 Bad Request
+// 주문을 찾지 못함              -> 404 Not Found
+// 이미 취소됨 / 취소 기간 지남   -> 409 Conflict
+```
+
+> 핵심은 "실패했다"를 모두 `400`으로 뭉개지 않는 것입니다.
+> 요청 자체가 틀린 것인지, 대상이 없는 것인지, 현재 상태 때문에 처리할 수 없는 것인지 구분해야 API 계약이 선명해집니다.
+
+---
+
+## 6. 006번 Order Cancel Controller 예시
+
+### 기존 코드
+
+```java
+// @PostMapping("/cancel")
+public Order cancelOrder(/* @RequestBody */ OrderCancelRequest request) {
+    return orderService.cancel(request);
+}
+```
+
+### 문제점
+
+- `Order` 엔티티를 API 응답으로 그대로 반환한다.
+- API 응답 스펙이 DB/도메인 구조와 강하게 결합된다.
+- `userId`, `status`, `type`, `cancelReason` 같은 내부 필드가 의도치 않게 노출될 수 있다.
+- 성공 응답이 `200 OK`인지 `204 No Content`인지, 실패 응답이 `400`, `404`, `409` 중 무엇인지 코드에서 드러나지 않는다.
+
+### 수정된 코드
+
+`OrderController.java`
+
+```java
+// @PostMapping("/cancel")
+public OrderCancelResponse cancelOrder(/* @RequestBody */ OrderCancelRequest request) {
+    Order order = orderService.cancel(request);
+    return OrderCancelResponse.from(order);
+}
+```
+
+`OrderCancelResponse.java`
+
+```java
+public class OrderCancelResponse {
+    public final Long orderId;
+    public final Long userId;
+    public final String status;
+    public final String cancelledAt;
+
+    private OrderCancelResponse(Long orderId, Long userId, String status, String cancelledAt) {
+        this.orderId = orderId;
+        this.userId = userId;
+        this.status = status;
+        this.cancelledAt = cancelledAt;
+    }
+
+    public static OrderCancelResponse from(Order order) {
+        return new OrderCancelResponse(
+                order.id,
+                order.userId,
+                order.status,
+                order.cancelledAt == null ? null : order.cancelledAt.toString()
+        );
+    }
+}
+```
+
+> 빠른 암기: `OrderCancelRequest`는 요청 의도이고, `OrderCancelResponse`는 서버 처리 결과다.
+> Response DTO는 Controller 내부 임시 클래스보다 별도 파일로 분리하는 것이 정석이다.
+
+### 실무 코드라면
+
+학습용 코드에는 Spring 의존성이 없으므로 `ResponseEntity`를 직접 사용하지 않았지만, 실제 Spring Controller라면 아래처럼 성공 상태코드까지 명확히 표현할 수 있습니다.
+
+```java
+// @PostMapping("/cancel")
+public ResponseEntity<OrderCancelResponse> cancelOrder(@Valid @RequestBody OrderCancelRequest request) {
+    Order order = orderService.cancel(request);
+    return ResponseEntity.ok(OrderCancelResponse.from(order));
+}
+```
+
+예외 상황은 Controller에서 직접 `try-catch`로 잡기보다 `@RestControllerAdvice`에서 공통 처리합니다.

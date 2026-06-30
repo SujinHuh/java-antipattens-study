@@ -28,6 +28,12 @@ public class Reservation {
 - **Request DTO**: 클라이언트 → 서버 방향 입력값
 - **Response DTO**: 서버 → 클라이언트 방향 결과값
 
+면접 직전 암기 문장:
+
+> Request DTO는 "클라이언트가 무엇을 해달라고 요청하는지"를 담는다.
+> Response DTO는 "서버가 처리한 결과를 어떻게 보여줄지"를 담는다.
+> 요청 DTO를 그대로 응답으로 돌려주는 것이 아니라, 서버 처리 결과를 응답 DTO로 새로 구성한다.
+
 ```java
 // Request DTO: 클라이언트가 보내는 '의도(Intent)'만 담아야 함
 public class ReservationRequest {

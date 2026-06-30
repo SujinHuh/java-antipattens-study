@@ -76,3 +76,33 @@ PointPayment payment = PointPayment.builder()
         // .id(999L) 👈 애초에 Builder에 id나 status 구멍을 안 뚫어놔서 조작 불가! 안전함!
         .build();
 ```
+
+---
+
+## 4. Builder와 상태 변경 메서드를 구분하기
+
+Builder는 **새 객체를 생성할 때** 가독성과 안전성을 높이는 도구입니다.
+반대로 이미 존재하는 Entity의 상태를 바꾸는 유스케이스에서는 Builder보다 **의미 있는 도메인 메서드**가 더 적절합니다.
+
+### 주문 취소 예시
+
+```java
+// ❌ Service가 Entity 필드를 직접 변경
+order.status = "CANCELLED";
+order.cancelledAt = LocalDateTime.now();
+order.cancelReason = request.reason;
+```
+
+위 코드를 Builder로 새 객체 생성처럼 바꾸는 것이 항상 정답은 아닙니다.
+주문 취소는 "새 주문 생성"이 아니라 "기존 주문의 상태 전이"이기 때문입니다.
+
+```java
+// ✅ Entity 안에 상태 변경 규칙을 캡슐화
+order.cancel(request.reason, LocalDateTime.now());
+```
+
+### 암기 포인트
+
+> Builder는 생성 패턴이다.
+> `cancel()`, `changeAddress()`, `refund()` 같은 도메인 메서드는 상태 변경 규칙을 보호하는 캡슐화다.
+> 기존 Entity의 상태 전이는 Builder보다 의미 있는 도메인 메서드로 표현하는 것이 더 자연스럽다.

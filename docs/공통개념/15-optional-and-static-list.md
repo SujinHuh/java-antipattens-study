@@ -53,7 +53,60 @@ PointPayment payment = result
 
 ---
 
-## 4. `static final List`의 문제점과 해결 방법
+## 4. `Optional.empty()`는 문제가 아니다
+
+Repository에서 조회 실패를 `Optional.empty()`로 표현하는 것은 좋은 방식입니다.
+문제는 Service가 그 `empty`를 어떻게 처리하느냐입니다.
+
+```java
+// ✅ Repository: 못 찾으면 Optional.empty()
+public Optional<Order> findById(Long id) {
+    return Optional.ofNullable(store.get(id));
+}
+```
+
+Service에서는 조회 실패 의미에 맞게 처리해야 합니다.
+
+```java
+// ✅ 조회 실패를 도메인 예외로 명확히 표현
+Order order = orderRepository.findById(orderId)
+        .orElseThrow(() -> new OrderCancelException(OrderCancelErrorCode.ORDER_NOT_FOUND));
+```
+
+반대로 조회 실패를 임시 객체 생성으로 숨기면 위험합니다.
+
+```java
+// ❌ 주문이 없는데 임시 주문을 만들어 정상 흐름처럼 진행
+Order order = orderRepository.findById(orderId)
+        .orElse(createTemporaryOrder(request));
+```
+
+### 암기 포인트
+
+> `Optional.empty()`는 "값 없음"을 안전하게 표현하는 정상 신호다.
+> 문제는 `empty`를 정상 데이터처럼 보정해서 실패를 숨기는 것이다.
+> 조회 실패는 보통 `orElseThrow()`로 도메인 예외를 던진다.
+
+---
+
+## 5. `orElse` vs `orElseGet`
+
+`orElse(기본값)`은 Optional 안에 값이 있어도 기본값 표현식이 먼저 평가될 수 있습니다.
+기본값 생성 비용이 크거나 부작용이 있다면 `orElseGet()`을 고려합니다.
+
+```java
+// 기본 객체 생성이 단순하면 가능
+orderOptional.orElse(defaultOrder);
+
+// 생성 비용이 있거나 실제 없을 때만 만들고 싶으면 권장
+orderOptional.orElseGet(() -> createDefaultOrder());
+```
+
+하지만 주문 취소처럼 "없으면 실패"여야 하는 유스케이스에서는 `orElse`/`orElseGet`보다 `orElseThrow`가 더 적절합니다.
+
+---
+
+## 6. `static final List`의 문제점과 해결 방법
 
 ### 문제점 정리
 | 문제 | 내용 |
@@ -91,7 +144,7 @@ public Optional<PointPayment> findById(Long id) {
 
 ---
 
-## 5. 핵심 요약
+## 7. 핵심 요약
 
 > **`null` 반환 대신 `Optional` 반환** → 받는 쪽이 "없을 수 있다"는 것을 타입으로 강제 인식, NPE 예방
 >
