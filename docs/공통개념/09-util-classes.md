@@ -168,3 +168,47 @@ public class OrderCancelValidator {
     }
 }
 ```
+
+---
+
+## 7. 007번 Service의 `LocalDateTime.now()` 직접 호출
+
+`LocalDateTime.now()` 문제는 Util 클래스에만 생기는 문제가 아닙니다.
+Service 안에서 발급 가능 시간, 만료 시간, 취소 가능 시간 같은 정책을 직접 현재 시간으로 판단해도 같은 문제가 생깁니다.
+
+```java
+LocalDateTime now = LocalDateTime.now();
+
+if (now.isBefore(coupon.startsAt) || now.isAfter(coupon.endsAt)) {
+    throw new StockCouponException("not issuable");
+}
+```
+
+이 코드는 실행하는 순간의 실제 시간에 따라 결과가 달라집니다.
+그래서 테스트에서 "발급 시작 직전", "발급 시작 시각", "발급 종료 직후" 같은 경계값을 고정하기 어렵습니다.
+
+개선 방향은 `Clock`을 주입받거나 시간 판단 정책을 별도 객체로 분리하는 것입니다.
+
+```java
+public class StockCouponIssuePolicy {
+    private final Clock clock;
+
+    public StockCouponIssuePolicy(Clock clock) {
+        this.clock = clock;
+    }
+
+    public void validateIssuable(StockCoupon coupon) {
+        LocalDateTime now = LocalDateTime.now(clock);
+        if (now.isBefore(coupon.startsAt) || now.isAfter(coupon.endsAt)) {
+            throw new CouponNotIssuableException();
+        }
+    }
+}
+```
+
+면접용 문장:
+
+```text
+시간 기준 정책은 LocalDateTime.now()를 직접 호출하면 테스트가 실행 시각에 의존합니다.
+Clock을 주입하거나 정책 객체로 분리해서 발급 시작/종료 같은 경계값을 고정해 검증할 수 있게 하겠습니다.
+```

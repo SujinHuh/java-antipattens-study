@@ -125,7 +125,33 @@ public String reserve(ReservationRequest request) {
 
 ---
 
-## 7. 핵심 요약
+## 7. 문항 007번 자가 호출 (Self-Invocation) 분석 케이스
+
+### ❌ 문제 코드 상황
+`issue` 메서드(트랜잭션 없음) 내부에서 같은 클래스의 `@Transactional`이 선언된 `issueInternal`을 직접 호출하고 있습니다.
+
+```java
+public class StockCouponService {
+    public StockCouponResponse issue(StockCouponRequest request) {
+        // ...
+        return issueInternal(request); // 👈 자가 호출 (this.issueInternal()과 동일)
+    }
+
+    @Transactional
+    public StockCouponResponse issueInternal(StockCouponRequest request) {
+        // ...
+    }
+}
+```
+
+### 💥 발생하는 실제 문제
+* 외부에서 `service.issue()`를 호출하면 프록시 객체가 아닌 원본 객체의 `issue()`가 먼저 실행됩니다.
+* `issue()` 내부에서 `issueInternal()`을 직접 호출하면 프록시를 통하지 않고 원본 객체의 메서드를 바로 호출하게 되므로, `@Transactional` 어노테이션이 붙어 있어도 트랜잭션이 동작하지 않습니다.
+* 결과적으로 모든 DB 작업이 개별 트랜잭션으로 처리되어 발급 중 오류가 발생하더라도 이전 변경 사항이 롤백되지 않는 데이터 정합성 장애를 유발합니다.
+
+---
+
+## 8. 핵심 요약
 
 > `@Transactional`은 Spring 프록시가 감싸줄 때만 동작한다.
 > 같은 클래스 안에서 `this.메서드()`를 직접 부르면 프록시를 건너뛰어 트랜잭션이 적용되지 않는다.
