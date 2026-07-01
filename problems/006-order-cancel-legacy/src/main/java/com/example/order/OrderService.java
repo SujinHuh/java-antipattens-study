@@ -6,13 +6,19 @@ import java.time.LocalDateTime;
 public class OrderService {
 
     private final OrderRepository orderRepository;
+    private final OrderCancelUtil orderCancelUtil;
 
     public OrderService() {
-        this(new OrderRepository());
+        this(new OrderRepository(), new OrderCancelUtil());
     }
 
     public OrderService(OrderRepository orderRepository) {
+        this(orderRepository, new OrderCancelUtil());
+    }
+
+    public OrderService(OrderRepository orderRepository, OrderCancelUtil orderCancelUtil) {
         this.orderRepository = orderRepository;
+        this.orderCancelUtil = orderCancelUtil;
     }
 
     // @Transactional
@@ -74,7 +80,7 @@ public class OrderService {
             throw new OrderCancelException(OrderCancelErrorCode.BLOCKED_ORDER);
         }
 
-        if (OrderCancelUtil.isCancelWindowClosed(order.createdAt)) {
+        if (orderCancelUtil.isCancelWindowClosed(order.createdAt)) {
             throw new OrderCancelException(OrderCancelErrorCode.CANCEL_WINDOW_CLOSED);
         }
 
@@ -82,12 +88,12 @@ public class OrderService {
         order.requestCancel(request.reason);
         orderRepository.save(order);
 
-        OrderCancelUtil.requestExternalPgRefund(order.id, refundAmount);
+        orderCancelUtil.requestExternalPgRefund(order.id, refundAmount);
 
         order.completeCancel(LocalDateTime.now());
         orderRepository.save(order);
 
-        OrderCancelUtil.sendAuditLog(order.userId, "order cancelled: " + order.id);
+        orderCancelUtil.sendAuditLog(order.userId, "order cancelled: " + order.id);
         return order;
     }
 

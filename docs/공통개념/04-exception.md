@@ -98,3 +98,48 @@ catch (DuplicateOrderException e)    → 409 CONFLICT
 
 > 예외는 **삼키지 말고**, **컨텍스트를 담아서**, **세분화**해서 던져야 한다.
 > 좋은 예외 메시지는 "누가, 무엇을, 왜"를 담아 로그만 봐도 원인을 파악할 수 있어야 한다.
+
+---
+
+## 5. 006번 Order Cancel Exception 예시
+
+### 기존 코드의 문제점 (`OrderService.java`)
+
+```java
+if (request == null || request.orderId == null) {
+    throw new RuntimeException("invalid cancel request"); // 표준 예외 직접 사용
+}
+
+if ("CANCELLED".equals(order.status)) {
+    throw new OrderCancelException("already cancelled"); // 커스텀 예외지만 메시지만 전달
+}
+```
+
+1. **표준 예외와 비즈니스 예외의 혼용**: 입력값 유효성 실패 시 `RuntimeException`을 던지고, 상태값 오류 시 `OrderCancelException`을 던지는 등 일관성이 없습니다.
+2. **에러 코드의 누락**: `OrderCancelException`에 에러를 식별할 수 있는 상태 코드나 내부 에러 코드(Enum)가 없고 단순 문자열 메시지만 넘겨받고 있습니다. 이 경우 전역 예외 처리기에서 예외마다 적절한 HTTP 상태코드(400, 404, 409 등)를 매핑해주기 어렵습니다.
+
+### 개선 방향
+
+에러 구분이 용이하도록 `OrderCancelErrorCode` 에러 코드 Enum을 정의하고, 도메인 예외인 `OrderCancelException`이 이를 포함하여 던지도록 수정합니다.
+
+```java
+public enum OrderCancelErrorCode {
+    INVALID_REQUEST,
+    ORDER_NOT_FOUND,
+    ALREADY_CANCELLED,
+    CANCEL_WINDOW_CLOSED
+}
+
+public class OrderCancelException extends RuntimeException {
+    private final OrderCancelErrorCode errorCode;
+
+    public OrderCancelException(OrderCancelErrorCode errorCode) {
+        super(errorCode.name());
+        this.errorCode = errorCode;
+    }
+
+    public OrderCancelErrorCode getErrorCode() {
+        return errorCode;
+    }
+}
+```

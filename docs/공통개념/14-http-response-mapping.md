@@ -85,10 +85,12 @@ public ResponseEntity<List<PointRefundHistoryResponse>> history(@RequestParam Lo
 
 ### 기본 원칙
 
-Controller는 **`ResponseEntity<응답DTO>`** 형태로 반환하는 것이 가장 권장됩니다.
+Controller는 HTTP 상태코드, 헤더, 바디를 명확히 제어해야 할 때 **`ResponseEntity<응답DTO>`** 형태를 사용할 수 있습니다.
+다만 단순 200 JSON 응답이라면 응답 DTO를 직접 반환해도 됩니다.
+면접에서는 `ResponseEntity`가 유일한 정답이라고 단정하기보다, **상태코드/헤더/실패 응답 제어가 필요한지**를 기준으로 말하는 것이 안전합니다.
 
 ```java
-// ✅ 가장 명확하고 권장되는 형태
+// ✅ 상태코드 제어가 필요한 경우 명확한 형태
 @PostMapping("/refund")
 public ResponseEntity<PointRefundResponse> refund(@RequestBody PointRefundRequest request) {
     PointRefundResponse response = service.refund(request);
@@ -112,7 +114,8 @@ public PointRefundResponse getRefund(@PathVariable Long id) {
 }
 ```
 
-단, 이 방식은 HTTP 상태코드를 세밀하게 제어하기 어려워 실무에서는 **일관성을 위해 항상 `ResponseEntity`를 쓰는 팀도 많습니다.**
+단, 이 방식은 HTTP 상태코드를 세밀하게 제어하기 어렵습니다.
+실무에서는 팀 컨벤션에 따라 단순 조회도 `ResponseEntity`로 통일할 수 있지만, 핵심 판단 기준은 "HTTP 표현을 직접 제어해야 하는가"입니다.
 
 ### 절대로 하면 안 되는 것들
 
@@ -127,6 +130,8 @@ public PointRefundResponse getRefund(@PathVariable Long id) {
 | 상황 | 권장 반환 타입 |
 |------|-------------|
 | 생성/수정/삭제 등 상태코드 제어 필요 | `ResponseEntity<응답DTO>` |
+| 실패 응답을 400/404/409로 명확히 나눠야 함 | `ResponseEntity` 또는 `@RestControllerAdvice` |
+| Location/Header/204 No Content/파일 다운로드 | `ResponseEntity` |
 | 단순 조회, 항상 200 OK | `응답DTO`만 반환해도 OK |
 | Entity, 문자열, Map 반환 | ❌ 절대 안 됨 |
 
@@ -238,3 +243,149 @@ public ResponseEntity<OrderCancelResponse> cancelOrder(@Valid @RequestBody Order
 ```
 
 예외 상황은 Controller에서 직접 `try-catch`로 잡기보다 `@RestControllerAdvice`에서 공통 처리합니다.
+
+---
+
+## 7. 007번 Stock Coupon Controller 예시
+
+### 기존 코드
+
+```java
+// @PostMapping("/issue")
+public StockCouponResponse issue(/* @RequestBody */ StockCouponRequest request) {
+    if (request == null) {
+        return new StockCouponResponse(null, null, "FAILED", 0);
+    }
+
+    return stockCouponService.issue(request);
+}
+```
+
+### 잘된 점
+
+- Controller가 Service를 직접 `new` 하지 않고 생성자 주입으로 받는다.
+- 재고 차감, 중복 발급 판단, 이벤트 발행 같은 비즈니스 로직을 Controller가 직접 수행하지 않는다.
+- Entity인 `StockCoupon`을 직접 반환하지 않고 `StockCouponResponse`를 반환한다.
+
+### 문제점
+
+- `request == null`을 실패 DTO로 직접 만들어 반환한다.
+- 실제 HTTP 상태는 성공처럼 보일 수 있는데, 응답 바디의 `"FAILED"` 문자열로만 실패를 표현한다.
+- `@Valid` 같은 입력 검증 경계가 보이지 않는다.
+- `FAILED`, `INACTIVE`, `NOT_OPEN`, `PENDING` 같은 상태 문자열이 많아질수록 FE/QA가 실패 기준을 예측하기 어렵다.
+
+### 개선 방향
+
+```java
+// @PostMapping("/issue")
+public ResponseEntity<StockCouponResponse> issue(
+    /* @Valid @RequestBody */ StockCouponIssueRequest request
+) {
+    StockCouponResponse response = stockCouponService.issue(request);
+    return ResponseEntity.ok(response);
+}
+```
+
+예외 상황은 Controller에서 직접 실패 DTO를 만들지 말고 공통 예외 처리에서 매핑합니다.
+
+```java
+// @RestControllerAdvice
+class ApiExceptionHandler {
+    // @ExceptionHandler(InvalidStockCouponRequestException.class)
+    ErrorResponse handleInvalidRequest(InvalidStockCouponRequestException e) {
+        return new ErrorResponse("INVALID_REQUEST", "invalid stock coupon request");
+    }
+}
+```
+
+### 면접용 문장
+
+```text
+ResponseEntity가 항상 정답은 아니지만, 이 문제처럼 실패 종류가 많고 상태코드 구분이 중요한 API에서는 응답 DTO만 직접 반환하는 것보다 HTTP 상태와 ErrorResponse 계약을 명확히 하는 편이 안전합니다.
+Controller가 얇아 보여도 실패를 200 응답 바디로 숨기면 API 계약이 약해집니다.
+```
+
+---
+
+## 8. 입력 검증 경계와 상태코드 매핑
+
+여기서 말하는 **입력 검증 경계**는 클라이언트가 보낸 값이 Service로 들어가기 전에 최소 형식 검증을 통과하는 지점입니다.
+
+예를 들어 쿠폰 발급 요청에서는 아래 값들이 요청 경계에서 검증되어야 합니다.
+
+| 필드 | 요청 형식 검증 |
+|------|---------------|
+| `userId` | null이면 안 됨 |
+| `couponId` | null이면 안 됨 |
+| `requestedQuantity` | 1 이상이어야 함 |
+| `idempotencyKey` | 빈 문자열이면 안 됨 |
+
+반대로 아래는 요청 형식 검증이 아니라 Service/Domain에서 판단해야 합니다.
+
+| 검증 | 판단 위치 |
+|------|----------|
+| 쿠폰이 실제로 존재하는가 | Service/Repository |
+| 이미 발급받았는가 | Service/Repository |
+| 발급 기간인가 | Service/Domain |
+| 재고가 남았는가 | Service/Domain |
+| 동시 요청에서 초과 발급을 막는가 | Transaction/RDBMS lock/Domain |
+
+암기 문장:
+
+```text
+@Valid는 형식 검증 경계입니다.
+null, blank, positive 같은 입력 형식은 Controller 요청 경계에서 막고,
+재고 존재 여부, 중복 발급 여부, 발급 기간 같은 도메인 규칙은 Service/Domain에서 판단합니다.
+```
+
+---
+
+## 7. 컨트롤러 수동 실패 DTO 생성 안티패턴
+
+수진님이 질문하신 "비정상 요청 포착 시 컨트롤러에서 왜 수동으로 실패 응답 객체를 생성해서 돌려주면 안 되는가"에 대한 핵심 설명입니다.
+
+### ❌ 안티패턴 (007번 예시)
+
+```java
+// StockCouponController.java
+public StockCouponResponse issue(StockCouponRequest request) {
+    if (request == null) {
+        return new StockCouponResponse(null, null, "FAILED", 0); // 👈 수동으로 FAILED 객체 생성
+    }
+    return stockCouponService.issue(request);
+}
+```
+
+### 무엇이 문제인가?
+
+1. **HTTP 상태코드 왜곡 (200 OK 버그)**:
+   * 위와 같이 `FAILED` 상태를 문자열로 가진 DTO 객체를 그냥 반환하면, Spring은 정상 응답으로 파악하여 HTTP 헤더에 **`200 OK`**를 실어 내보냅니다.
+   * 클라이언트(웹/모바일)는 네트워크 통신 수준에서는 '성공(200)'으로 해석했다가, 바디 파싱 후에야 실패임을 깨닫고 오작동할 우려가 있습니다.
+2. **컨트롤러의 책임 초과**:
+   * 컨트롤러가 비즈니스 오류나 입력 실패 시 사용할 기본 필드 구조(`null`, `FAILED`, `0` 등)를 스스로 정의하고 매핑하는 것은 단일 책임 원칙(SRP)에 위배됩니다.
+3. **코드 중복 및 비표준화**:
+   * 각 컨트롤러마다 `new Response(..., "FAILED")`를 중구난방으로 작성하게 되어 일관된 예외 응답 계약을 강제하기 힘듭니다.
+
+### ✅ 올바른 개선 방향
+
+컨트롤러는 비정상 유입을 차단하는 최소한의 형식 검증(`@Valid`, `@NotNull`)만 수행하고, 비정상 요청 감지 시 비즈니스 예외(예: `StockCouponException`)를 던지도록 설계합니다. 그리고 실제 예외 처리는 **`@RestControllerAdvice` 전역 처리기**에게 위임하여 표준 HTTP 응답코드와 구조화된 에러 JSON을 내려줍니다.
+
+```java
+// Controller
+@PostMapping("/issue")
+public ResponseEntity<StockCouponResponse> issue(@Valid @RequestBody StockCouponRequest request) {
+    StockCouponResponse response = stockCouponService.issue(request);
+    return ResponseEntity.status(HttpStatus.CREATED).body(response);
+}
+
+// Global Exception Handler
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+    @ExceptionHandler(StockCouponException.class)
+    public ResponseEntity<ErrorResponse> handleCouponException(StockCouponException e) {
+        // 실제 실패 의미에 맞는 HTTP 상태코드(예: 400 Bad Request)와 정형화된 JSON 에러 반환
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse("COUPON_ISSUE_FAILED", e.getMessage()));
+    }
+}
+```

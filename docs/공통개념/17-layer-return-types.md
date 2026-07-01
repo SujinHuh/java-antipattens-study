@@ -17,6 +17,9 @@ Repository  →  Entity 또는 Optional<Entity> (DB 조회 결과)
 ## 2. Controller — `ResponseEntity<ResponseDTO>`
 
 Controller는 HTTP 응답을 책임지는 계층입니다.
+단, `ResponseEntity`가 항상 유일한 정답은 아닙니다.
+항상 200 OK인 단순 조회라면 Response DTO만 직접 반환해도 됩니다.
+다만 상태코드, 헤더, Location, 204 No Content, 실패 응답을 명확히 제어해야 하면 `ResponseEntity`나 `@RestControllerAdvice`가 필요합니다.
 
 ```java
 // ✅ 올바른 반환
@@ -52,6 +55,36 @@ public Map<String, Object> refund(...) { return Map.of("status", 200, ...); }
 
 // ❌ Service가 ResponseEntity를 만들면 Controller에서 그대로 반환하는 것
 // Service는 HTTP 응답을 알면 안 됨!
+```
+
+### 007번 Controller에서 헷갈린 포인트
+
+```java
+public StockCouponResponse issue(StockCouponRequest request) {
+    if (request == null) {
+        return new StockCouponResponse(null, null, "FAILED", 0);
+    }
+    return stockCouponService.issue(request);
+}
+```
+
+좋은 점:
+
+- Controller가 Service를 생성자 주입으로 받는다.
+- Entity를 직접 반환하지 않고 Response DTO를 반환한다.
+- 핵심 비즈니스 로직은 Service에 맡긴다.
+
+문제점:
+
+- `request == null`을 성공 응답처럼 보이는 실패 DTO로 직접 만든다.
+- 실패가 HTTP 상태코드가 아니라 응답 바디의 문자열 `status`에만 들어간다.
+- `@Valid` 같은 요청 형식 검증 경계가 보이지 않는다.
+
+면접 답변:
+
+```text
+Controller가 얇고 Response DTO를 반환하는 점은 좋지만, null 요청을 FAILED 응답 DTO로 직접 만들어 반환하면 실제 HTTP 상태는 성공처럼 보일 수 있습니다.
+요청 형식 검증은 @Valid와 Request DTO에 맡기고, 실패 응답은 공통 예외 처리에서 400/404/409 같은 HTTP 상태로 일관되게 매핑하는 편이 좋습니다.
 ```
 
 ---

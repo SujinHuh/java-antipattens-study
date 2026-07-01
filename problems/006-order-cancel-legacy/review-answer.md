@@ -122,7 +122,7 @@ if ("DIGITAL".equals(order.type)) {
 return OrderType.from(order.type).calculateRefundAmount(order.amount);
 ```
 
-#### 문제 3. Service가 Entity의 public field를 직접 변경한다
+#### 문제 3. Service가 Entity of public field를 직접 변경한다
 
 - 기존 코드:
 
@@ -261,7 +261,135 @@ Order order = orderRepository.findById(request.orderId)
 
 ### 4. Util
 
-- 
+#### 문제 1. `isCancelWindowClosed()`가 단순 Util이 아니라 취소 정책을 판단한다
+
+- 기존 코드:
+
+```java
+public static boolean isCancelWindowClosed(LocalDateTime createdAt) {
+    if (createdAt == null) {
+        return true;
+    }
+    return LocalDateTime.now().minusMinutes(30).isAfter(createdAt);
+}
+```
+
+- 판단: `createdAt == null`이면 `true`를 반환하는 부분과, 생성 후 30분이 지났는지 판단하는 부분은 단순 공통 함수라기보다 주문 취소 가능 시간 정책이다.
+- 왜 문제인지: Util은 보통 문자열 포맷, 날짜 변환, 단순 계산처럼 여러 곳에서 재사용 가능한 순수 보조 함수에 가깝다. 그런데 이 메서드는 "생성 시간이 없으면 취소 불가로 볼 것인가", "30분이 지나면 취소 불가로 볼 것인가"라는 도메인 규칙을 결정한다.
+- 실무 영향: 취소 가능 시간이 30분에서 1시간으로 바뀌거나, `createdAt == null`을 데이터 오류로 볼지 취소 불가로 볼지 정책이 바뀌면 Util을 수정해야 한다. 다른 도메인에서도 이 Util을 공통 함수처럼 재사용하면 잘못된 정책이 퍼질 수 있다.
+- 개선 방향: 취소 가능 시간 판단은 `OrderCancelPolicy` 또는 `OrderCancelValidator`로 분리하는 것이 더 명확하다. 최소한 현재 코드에서는 `Clock`을 주입받아 테스트에서 시간을 고정할 수 있게 한다.
+
+- 리팩토링 코드:
+
+```java
+private final Clock clock;
+
+public OrderCancelUtil(Clock clock) {
+    this.clock = clock;
+}
+
+public boolean isCancelWindowClosed(LocalDateTime createdAt) {
+    if (createdAt == null) {
+        return true;
+    }
+    return LocalDateTime.now(clock).minusMinutes(30).isAfter(createdAt);
+}
+```
+
+- 면접용 문장:
+
+```text
+이 메서드는 단순 공통 Util이라기보다 주문 취소 가능 시간이라는 도메인 정책을 판단하고 있습니다.
+따라서 Policy나 Validator로 분리하는 것이 더 명확하고, 현재 시간은 LocalDateTime.now()를 직접 호출하기보다 Clock을 주입해 테스트 가능하게 만드는 편이 좋습니다.
+```
+
+#### 문제 2. `LocalDateTime.now()`를 직접 호출해 테스트에서 시간을 고정하기 어렵다
+
+- 기존 코드:
+
+```java
+return LocalDateTime.now().minusMinutes(30).isAfter(createdAt);
+```
+
+- 문제점: 코드 안에서 현재 시간을 직접 가져온다.
+- 왜 문제인지: 현재 시간은 테스트를 실행하는 순간마다 달라진다. 취소 가능 시간이 30분인지 검증하려면 테스트에서 "지금"을 고정해야 하는데, `LocalDateTime.now()`가 코드 안에 박혀 있으면 경계값 테스트가 흔들릴 수 있다.
+- 실무 영향: 29분 59초, 30분, 30분 1초 같은 경계 테스트가 실행 시점에 따라 실패하거나 통과할 수 있다.
+- 개선 방향: `Clock`을 주입받고 `LocalDateTime.now(clock)`을 사용한다. 테스트에서는 고정된 `Clock.fixed(...)`를 넣어 같은 결과를 재현한다.
+
+- 개선된 테스트 관점:
+
+```java
+Clock fixedClock = Clock.fixed(instant, zoneId);
+OrderCancelUtil util = new OrderCancelUtil(fixedClock);
+```
+
+#### 문제 3. `System.out.println`으로 외부 행동과 감사 로그를 처리한다
+
+- 기존 코드:
+
+```java
+public static void requestExternalPgRefund(Long orderId, int refundAmount) {
+    System.out.println("PG Refund Request: orderId=" + orderId + ", amount=" + refundAmount);
+}
+
+public static void sendAuditLog(Long userId, String message) {
+    System.out.println("audit log send to user " + userId + ": " + message);
+}
+```
+
+- 문제점: 외부 PG 환불 요청과 감사 로그 전송을 `System.out.println`으로 처리하고 있다.
+- 왜 문제인지: `println`은 로그 레벨, traceId, 수집 시스템 연동, 장애 추적에 적합하지 않다. 또한 PG 환불 요청과 감사 로그는 단순 출력이 아니라 외부 부작용이다.
+- 실무 영향: 운영에서 어떤 요청이 실패했는지 추적하기 어렵고, 실제 PG/API/로그 시스템으로 바뀔 때 테스트 대체와 장애 처리가 어렵다.
+- 개선 방향: 단순 로그는 Logger를 사용한다. 더 나아가 PG 환불 요청은 `PgRefundClient`, 감사 로그나 알림은 `AuditLogger` 또는 `Notifier` 같은 별도 Component로 분리한다.
+
+- Rivert/Refactored Code:
+```java
+private static final Logger log = Logger.getLogger(OrderCancelUtil.class.getName());
+
+public void requestExternalPgRefund(Long orderId, int refundAmount) {
+    log.info("PG Refund Request: orderId=" + orderId + ", amount=" + refundAmount);
+}
+
+public void sendAuditLog(Long userId, String message) {
+    log.info("audit log send to user " + userId + ": " + message);
+}
+```
+
+#### 문제 4. static Util이라 테스트에서 fake/mock으로 대체하기 어렵다
+
+- 기존 코드:
+
+```java
+OrderCancelUtil.requestExternalPgRefund(order.id, refundAmount);
+OrderCancelUtil.sendAuditLog(order.userId, "order cancelled: " + order.id);
+```
+
+- 문제점: Service가 static 메서드를 직접 호출한다.
+- 왜 문제인지: static 메서드는 객체로 주입받는 구조가 아니기 때문에 테스트에서 가짜 PG 클라이언트나 가짜 감사 로그 컴포넌트로 갈아끼우기 어렵다.
+- 실무 영향: 주문 취소 Service 테스트를 할 때 실제 외부 호출이 나가거나, 외부 호출 성공/실패 시나리오를 유연하게 검증하기 어렵다.
+- 개선 방향: static 메서드 대신 인스턴스 객체를 생성자 주입받도록 바꾼다. 테스트에서는 `FakeOrderCancelUtil`, `FakePgRefundClient` 같은 대역을 넣어 외부 부작용 없이 Service 흐름을 검증한다.
+
+- 리팩토링 코드:
+
+```java
+private final OrderCancelUtil orderCancelUtil;
+
+public OrderService(OrderRepository orderRepository, OrderCancelUtil orderCancelUtil) {
+    this.orderRepository = orderRepository;
+    this.orderCancelUtil = orderCancelUtil;
+}
+
+orderCancelUtil.requestExternalPgRefund(order.id, refundAmount);
+orderCancelUtil.sendAuditLog(order.userId, "order cancelled: " + order.id);
+```
+
+#### Util 정리 문장
+
+```text
+Util은 공통으로 재사용되는 순수 보조 함수에 가깝습니다.
+문자열 포맷, 단순 날짜 변환처럼 입력이 같으면 항상 같은 결과를 내는 코드는 Util로 둘 수 있습니다.
+하지만 취소 가능 여부, 환불 정책, 알림, 외부 PG 호출처럼 도메인 정책이나 부작용이 있으면 Policy, Validator, Notifier, Client/Component로 분리하는 편이 좋습니다.
+```
 
 ---
 

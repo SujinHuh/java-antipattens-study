@@ -115,3 +115,56 @@ String maskedPhone = StringUtil.maskPhoneNumber(user.getPhone());
 *   **무분별한 Util 생성 금지**: "어디 넣을지 모르겠네? 대충 Util에 넣자"라고 하다 보면, Util 클래스가 쓰레기통처럼 변합니다.
 *   **도메인 로직은 Entity 안으로**: 데이터 변환 로직이 특정 Entity(예: User)에만 강하게 연관되어 있다면, `UserUtil`을 만들기보다는 `User` Entity 내부의 메서드로 만드는 것이 객체지향적입니다.
 *   **외부 라이브러리 활용**: 문자열이나 컬렉션 조작은 내가 직접 만들기보다 Apache Commons (`StringUtils`)나 Guava 같은 이미 검증된 라이브러리의 Util을 쓰는 것이 좋습니다.
+
+---
+
+## 6. 006번 Order Cancel Util 예시
+
+### 기존 코드의 문제점 (`OrderCancelUtil.java`)
+
+```java
+public class OrderCancelUtil {
+    public static boolean isCancelWindowClosed(LocalDateTime createdAt) {
+        if (createdAt == null) {
+            return true;
+        }
+        return LocalDateTime.now().minusMinutes(30).isAfter(createdAt);
+    }
+
+    public static void requestExternalPgRefund(Long orderId, int refundAmount) {
+        System.out.println("PG Refund Request: orderId=" + orderId + ", amount=" + refundAmount);
+    }
+
+    public static void sendAuditLog(Long userId, String message) {
+        System.out.println("audit log send to user " + userId + ": " + message);
+    }
+}
+```
+
+1. **비즈니스/도메인 정책의 Util 포함**: "30분 이내 취소 가능"이라는 도메인 정책이 Util 클래스 안에 굳어있어 정책 변경(예: 1시간) 시 Util 코드를 수정해야 합니다.
+2. **테스트 불가능성 (LocalDateTime.now())**: `LocalDateTime.now()`가 static 메서드에 박혀있어 테스트 코드 실행 시점에 따라 결과가 바뀌며 고정하기 어렵습니다.
+3. **외부 API 호출/부작용(Side Effect)의 static 처리**: 외부 PG 호출 및 감사 로그 전송이 static 메서드로 되어 있어 단위 테스트 시 Mocking이나 Fake 객체로 교체하는 것이 불가능합니다.
+4. **로깅 대신 `System.out.println`**: 디버깅과 모니터링이 필요한 실무 로그를 `System.out`으로 출력하여 로그 관리 및 추적이 불가능합니다.
+
+### 개선 방향
+
+- **시간 격리**: `Clock` 객체를 주입받아 `LocalDateTime.now(clock)`으로 변경하고, Util을 Spring Bean(`@Component`)으로 등록하여 의존성을 주입받도록 설계합니다.
+- **인터페이스 분리 및 DI**: 외부 PG 환불은 `PgRefundClient` 컴포넌트로, 감사 로그는 `AuditLogger` 등으로 분리하여 의존성 주입을 받습니다.
+
+```java
+@Component
+public class OrderCancelValidator {
+    private final Clock clock;
+
+    public OrderCancelValidator(Clock clock) {
+        this.clock = clock;
+    }
+
+    public boolean isCancelWindowClosed(LocalDateTime createdAt) {
+        if (createdAt == null) {
+            return true;
+        }
+        return LocalDateTime.now(clock).minusMinutes(30).isAfter(createdAt);
+    }
+}
+```

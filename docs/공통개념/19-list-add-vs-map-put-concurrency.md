@@ -75,3 +75,37 @@ public class InMemoryOrderRepository {
 > "수정(Update) 유스케이스가 포함된 저장 로직에서 `List.add()`를 사용하면 기존 데이터가 교체되는 것이 아니라 동일한 식별자의 데이터가 중복해서 계속 쌓이는 버그가 발생합니다.
 > 
 > 데이터베이스의 기본키(PK) 유일성 제약조건처럼 동작하도록 인메모리 저장소를 설계하려면, `List` 대신 식별자를 Key로 하는 `Map` 구조를 사용하고 **`Map.put(id, entity)`** 방식을 취해야 합니다. 이렇게 하면 Key가 이미 존재할 때는 자동으로 최신 객체로 덮어씌워져(Update) 정합성이 유지됩니다."
+
+---
+
+## 4. 006번 Order Cancel Repository 예시
+
+### 기존 코드의 문제점 (`OrderRepository.java`)
+
+```java
+public class OrderRepository {
+    private static final List<Order> orders = new ArrayList<>();
+
+    public void save(Order order) {
+        orders.add(order); // 👈 수정 유스케이스에서도 매번 add만 수행!
+    }
+}
+```
+
+주문 취소 시 기존 주문 정보를 찾아서 `status`를 `CANCELLED`로 변경한 뒤 `save(order)`를 호출합니다. 이때 `ArrayList.add()`를 사용하면, 기존 `ACTIVE` 상태의 주문 객체가 리스트에 남아있고 `CANCELLED` 상태의 동일한 ID를 가진 새 주문 객체가 뒤에 하나 더 추가됩니다. 
+
+결과적으로 같은 ID의 주문이 여러 개 존재하게 되고, 다음 번 단건 조회(`findById`) 시 리스트를 순회하며 처음 발견된 `ACTIVE` 상태의 객체를 반환하게 되어 취소 상태가 정상적으로 보이지 않는 데이터 부정합 버그가 일어납니다.
+
+### 개선 방향
+
+인메모리 저장소를 `Map<Long, Order>` 구조로 전환하고, `save` 메서드는 `put`을 이용하여 동일 ID 발생 시 데이터를 덮어쓰도록(Update) 유도합니다.
+
+```java
+public class OrderRepository {
+    private static final Map<Long, Order> orders = new ConcurrentHashMap<>();
+
+    public void save(Order order) {
+        orders.put(order.id, order); // 덮어쓰기 방식으로 저장 및 수정 해결
+    }
+}
+```

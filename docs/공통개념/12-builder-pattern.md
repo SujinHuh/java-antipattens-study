@@ -106,3 +106,27 @@ order.cancel(request.reason, LocalDateTime.now());
 > Builder는 생성 패턴이다.
 > `cancel()`, `changeAddress()`, `refund()` 같은 도메인 메서드는 상태 변경 규칙을 보호하는 캡슐화다.
 > 기존 Entity의 상태 전이는 Builder보다 의미 있는 도메인 메서드로 표현하는 것이 더 자연스럽다.
+
+---
+
+## 5. `@Builder` 패턴 vs Java `record` 사용 기준
+
+수진님이 질문하신 빌더 패턴과 레코드의 사용 시점을 비교하여 정리한 핵심 가이드라인입니다.
+
+| 비교 항목 | `@Builder` (Lombok) | Java `record` (Java 16+) |
+| :--- | :--- | :--- |
+| **핵심 목적** | 객체 생성 시 가독성 및 필드 선택 조립 | 변경 불가능한 불변 데이터 캐리어 정의 |
+| **불변성 여부** | 가변(Mutable) 객체와 불변 객체 모두 사용 가능 | **100% 불변(Immutable)** (모든 필드가 `final`) |
+| **주요 대상** | **JPA Entity**, 복잡한 가변 도메인 모델 | **Request/Response DTO**, 단순 데이터 운반 객체 |
+| **JPA Entity 가능 여부**| **가능** (기본 생성자 및 프록시 생성 제약 없음) | **불가능** (Hibernate 프록시 생성 및 가변 필드 수정 제약) |
+
+### 💡 실무 적용 원칙
+
+1. **JPA Entity에는 `@Builder`를 사용합니다.**
+   * JPA(Hibernate)는 프록시 생성(지연 로딩) 및 dirty checking(변경 감지) 동작을 위해 **인스턴스 필드의 수정(가변성)**과 **인자가 없는 기본 생성자**가 필수적입니다.
+   * 레코드(`record`)는 필드가 강제로 `final`이 되고 상속이 금지되므로 **JPA Entity로 사용할 수 없습니다.**
+   * 따라서 엔티티를 생성할 때는 생성자 위에 `@Builder`를 선언해 가독성을 확보하는 것이 모범 사례입니다.
+
+2. **API 요청/응답(DTO)에는 `record`를 사용합니다.**
+   * 컨트롤러가 받거나 반환하는 DTO(Data Transfer Object)는 데이터를 전달하는 동안 값이 변해서는 안 되며, 비즈니스 로직을 가지지 않습니다.
+   * 레코드를 사용하면 보일러플레이트 코드(Getter, 생성자, equals, hashCode, toString) 없이 깔끔하게 불변 DTO를 정의할 수 있습니다.

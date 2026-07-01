@@ -17,6 +17,10 @@
       <module fileurl="file://$PROJECT_DIR$/problems/004-point-refund-legacy/solution/src/test/test.iml" filepath="$PROJECT_DIR$/problems/004-point-refund-legacy/solution/src/test/test.iml" />
       <module fileurl="file://$PROJECT_DIR$/problems/005-delivery-address-legacy/src/main/main.iml" filepath="$PROJECT_DIR$/problems/005-delivery-address-legacy/src/main/main.iml" />
       <module fileurl="file://$PROJECT_DIR$/problems/005-delivery-address-legacy/src/test/test.iml" filepath="$PROJECT_DIR$/problems/005-delivery-address-legacy/src/test/test.iml" />
+      <module fileurl="file://$PROJECT_DIR$/problems/006-order-cancel-legacy/src/main/main.iml" filepath="$PROJECT_DIR$/problems/006-order-cancel-legacy/src/main/main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/problems/006-order-cancel-legacy/src/test/test.iml" filepath="$PROJECT_DIR$/problems/006-order-cancel-legacy/src/test/test.iml" />
+      <module fileurl="file://$PROJECT_DIR$/problems/007-stock-coupon-legacy/src/main/main.iml" filepath="$PROJECT_DIR$/problems/007-stock-coupon-legacy/src/main/main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/problems/007-stock-coupon-legacy/src/test/test.iml" filepath="$PROJECT_DIR$/problems/007-stock-coupon-legacy/src/test/test.iml" />
     </modules>
   </component>
 </project>
