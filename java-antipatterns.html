@@ -561,6 +561,11 @@
         </section>
 
         <section class="flow-section">
+          <h2>정답이 하나가 아닐 때 답변하는 기준</h2>
+          <div class="tips-grid" id="decisionMatrix"></div>
+        </section>
+
+        <section class="flow-section">
           <h2>23번 매트릭스와 공통 개념 연결</h2>
           <div class="tips-grid" id="conceptCoverage"></div>
         </section>
@@ -622,10 +627,9 @@ class CouponController {
 class CouponController {
   private final CouponService service;
 
-  public ResponseEntity<CouponUseResponse> use(
+  public CouponUseResponse use(
       @Valid @RequestBody CouponUseRequest request) {
-    CouponUseResponse response = service.use(request);
-    return ResponseEntity.ok(response);
+    return service.use(request);
   }
 }`,
         problem: "HTTP 계층이 쿠폰 조회, 만료 판단, 상태 변경, 저장까지 처리한다. Controller가 유스케이스를 직접 수행하면 테스트와 변경이 어려워진다.",
@@ -1464,6 +1468,85 @@ class OrderController {
 }`,
         problem: "Service가 HTTP 상태와 응답 본문을 만들면 웹 계층에 종속되고 재사용/테스트가 어려워진다.",
         interview: "ResponseEntity는 Controller의 HTTP 응답 표현이고, Service는 도메인 결과나 예외를 반환하는 편이 좋습니다."
+      },
+      {
+        name: "Controller 응답 형태를 하나의 정답으로 단정",
+        category: "Controller",
+        keywords: ["ResponseEntity", "Response DTO", "@ResponseStatus", "HTTP 계약", "트레이드오프"],
+        bad: `@PostMapping("/orders")
+public OrderResponse create(@RequestBody OrderRequest request) {
+  return orderService.create(request);
+}
+
+// "Controller는 무조건 ResponseEntity<DTO>만 정답입니다."`,
+        good: `@PostMapping("/orders")
+public ResponseEntity<OrderResponse> create(@Valid @RequestBody OrderRequest request) {
+  OrderResponse response = orderService.create(request);
+  return ResponseEntity.created(URI.create("/orders/" + response.id()))
+      .body(response);
+}
+
+@GetMapping("/orders/{id}")
+public OrderResponse find(@PathVariable Long id) {
+  return orderService.find(id);
+}`,
+        problem: "Controller 응답은 항상 한 가지 형태만 맞는 것이 아니다. 상태코드, 헤더, Location, 빈 본문, 파일 다운로드처럼 HTTP 표현을 세밀하게 제어해야 하면 ResponseEntity가 유리하고, 단순 200 JSON 조회는 Response DTO 직접 반환도 충분할 수 있다.",
+        interview: "면접에서는 'ResponseEntity<DTO>가 유일한 정답'이라고 단정하지 말고, HTTP 상태/헤더 제어가 필요한지와 API 계약을 얼마나 명시해야 하는지 기준으로 선택하겠다고 답하는 편이 좋습니다."
+      },
+      {
+        name: "Service 반환 타입을 DTO 하나로만 고정",
+        category: "Service",
+        keywords: ["Service 반환 타입", "Response DTO", "Result 객체", "Entity 반환", "계층 경계"],
+        bad: `class OrderService {
+  public ResponseEntity<OrderResponse> cancel(Long id) {
+    Order order = orderRepository.findById(id).orElseThrow();
+    order.cancel();
+    return ResponseEntity.ok(OrderResponse.from(order));
+  }
+}`,
+        good: `class OrderService {
+  public OrderCancelResult cancel(Long id) {
+    Order order = orderRepository.findById(id).orElseThrow();
+    order.cancel();
+    return OrderCancelResult.from(order);
+  }
+}
+
+class OrderController {
+  ResponseEntity<OrderCancelResponse> cancel(Long id) {
+    return ResponseEntity.ok(OrderCancelResponse.from(service.cancel(id)));
+  }
+}`,
+        problem: "Service가 반드시 Response DTO만 반환해야 하는 것도 아니고, 항상 Entity만 반환해야 하는 것도 아니다. 외부 API 계약과 분리된 Result/CommandResult를 반환하면 Controller의 HTTP 변환과 Service 유스케이스 결과를 나누기 쉽다.",
+        interview: "Service 반환은 도메인 Entity, Result 객체, 내부 DTO 중 맥락에 따라 선택하되, ResponseEntity처럼 HTTP 계층 타입을 Service로 끌고 내려오지는 않겠다고 설명하면 좋습니다."
+      },
+      {
+        name: "DTO 변환 위치를 무조건 Controller로 몰아감",
+        category: "DTO / Entity",
+        keywords: ["DTO 변환 위치", "Mapper", "Response DTO", "Service", "Controller"],
+        bad: `@GetMapping("/orders/{id}")
+public OrderResponse find(@PathVariable Long id) {
+  Order order = orderService.findEntity(id);
+  return new OrderResponse(
+      order.id(),
+      order.status().name(),
+      order.user().email(),
+      order.payment().cardNo()
+  );
+}`,
+        good: `@GetMapping("/orders/{id}")
+public OrderResponse find(@PathVariable Long id) {
+  return orderService.findResponse(id);
+}
+
+class OrderService {
+  OrderResponse findResponse(Long id) {
+    Order order = orderRepository.findById(id).orElseThrow();
+    return OrderResponse.from(order);
+  }
+}`,
+        problem: "작은 조회 API에서는 Controller에서 Response DTO로 변환해도 되지만, 조립 규칙이 커지거나 Lazy Loading, 민감정보 제외, 여러 Repository 조회가 섞이면 Controller가 과책임이 된다.",
+        interview: "DTO 변환 위치는 팀 규칙과 복잡도에 따라 달라질 수 있습니다. 단순 변환은 Controller/DTO factory가 가능하고, 유스케이스 결과 조립은 Service나 Mapper로 분리해 Controller를 얇게 유지하겠습니다."
       },
       {
         name: "리팩토링 우선순위 없이 전부 고치려 함",
@@ -2491,6 +2574,65 @@ void save(Order order) {
       }
     ];
 
+    const decisionMatrix = [
+      {
+        concept: "Controller 응답 형태",
+        points: [
+          "단순 200 JSON 조회는 Response DTO 직접 반환도 가능하다.",
+          "201 Created, 204 No Content, Location/Header, 파일 다운로드, 캐시 제어가 필요하면 ResponseEntity가 유리하다.",
+          "핵심은 Entity/Map/String을 즉흥 반환하지 않고 외부 API 계약을 안정적으로 고정하는 것이다."
+        ]
+      },
+      {
+        concept: "ResponseEntity 빠른 구분",
+        points: [
+          "필요한 경우: 생성 Location, 커스텀 헤더, 상태코드 분기, 빈 본문, 다운로드/스트리밍처럼 HTTP 표현을 직접 제어한다.",
+          "없어도 되는 경우: 항상 200 JSON이고 본문 DTO만 안정적으로 내려주면 된다.",
+          "주의할 점: ResponseEntity를 쓰는 것 자체보다, Entity 직접 노출과 실패 200 감싸기를 피하는 것이 더 중요하다."
+        ]
+      },
+      {
+        concept: "Service 반환 타입",
+        points: [
+          "Service가 ResponseEntity를 반환하면 HTTP 계층이 내려와서 경계가 흐려진다.",
+          "도메인 Entity, Result 객체, 내부 DTO, Response DTO 중 팀 규칙과 복잡도에 맞게 선택할 수 있다.",
+          "외부 API 스펙 변경이 Service 도메인 흐름까지 흔들리면 결합도가 높은 신호다."
+        ]
+      },
+      {
+        concept: "DTO 변환 위치",
+        points: [
+          "단순 필드 매핑은 Controller에서 Response DTO factory를 호출해도 무방하다.",
+          "여러 Entity 조합, 권한별 필드 마스킹, Lazy Loading 제어가 필요하면 Service/Mapper/query projection을 고려한다.",
+          "Entity가 API 응답 구조를 직접 알거나 Controller가 도메인 생성과 상태 초기화를 맡는 흐름은 피한다."
+        ]
+      },
+      {
+        concept: "조회 실패 표현",
+        points: [
+          "단건 상세/수정/취소에서 값 없음은 보통 404 예외로 바꾸는 것이 자연스럽다.",
+          "목록 검색의 값 없음은 실패가 아니라 빈 List일 수 있다.",
+          "Optional, null, 예외 자체보다 실패를 임시 Entity나 기본값으로 숨겨 정상 흐름처럼 진행하는지가 더 위험하다."
+        ]
+      },
+      {
+        concept: "검증 위치",
+        points: [
+          "@Valid는 null, blank, size 같은 입력 형식 검증에 적합하다.",
+          "소유자, 상태 전이, 금액 계산, 취소 가능 시간은 저장된 데이터와 정책이 필요하므로 Service/Domain에서 검증한다.",
+          "Controller에서 모든 검증을 끝내려 하면 요청 경계와 비즈니스 규칙이 섞인다."
+        ]
+      },
+      {
+        concept: "상태코드 선택",
+        points: [
+          "성공 바디가 있으면 200, 생성은 201, 성공했지만 바디가 없으면 204를 고려한다.",
+          "입력 오류는 400, 대상 없음은 404, 이미 처리됨/상태 충돌은 409로 나누면 FE/QA가 예측하기 쉽다.",
+          "기존 API가 이미 200 wrapper를 쓰고 있다면 호환성 유지와 개선 로드맵을 함께 말한다."
+        ]
+      }
+    ];
+
     const flowSteps = [
       {
         step: "입력값",
@@ -2569,6 +2711,7 @@ void save(Order order) {
     const scenarioVariantsRoot = document.getElementById("scenarioVariants");
     const flowRelationRoot = document.getElementById("flowRelation");
     const conceptCoverageRoot = document.getElementById("conceptCoverage");
+    const decisionMatrixRoot = document.getElementById("decisionMatrix");
     const flowStepsRoot = document.getElementById("flowSteps");
     let selectedCategory = "All";
 
@@ -2944,6 +3087,17 @@ void save(Order order) {
       `).join("");
     }
 
+    function renderDecisionMatrix() {
+      decisionMatrixRoot.innerHTML = decisionMatrix.map(item => `
+        <article class="tip-card">
+          <h3>${escapeHtml(item.concept)}</h3>
+          <ul>
+            ${item.points.map(point => `<li>${escapeHtml(point)}</li>`).join("")}
+          </ul>
+        </article>
+      `).join("");
+    }
+
     function renderFlowSteps() {
       flowStepsRoot.innerHTML = flowSteps.map(item => `
         <article class="flow-step ${item.status}">
@@ -2986,6 +3140,7 @@ void save(Order order) {
     renderScenarioVariants();
     renderFlowRelation();
     renderConceptCoverage();
+    renderDecisionMatrix();
     renderFlowSteps();
     render();
   </script>
