@@ -1,0 +1,4437 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Java/Spring Legacy Antipattern Review</title>
+  <style>
+    :root {
+      --bg: #f7f8fb;
+      --panel: #ffffff;
+      --text: #172033;
+      --muted: #647084;
+      --line: #d9dfeb;
+      --bad-bg: #fff1f1;
+      --bad-line: #f1b7b7;
+      --bad-title: #b42318;
+      --good-bg: #eefaf2;
+      --good-line: #a7dfb8;
+      --good-title: #177245;
+      --primary: #2457c5;
+      --tag: #eef3ff;
+      --shadow: 0 10px 26px rgba(23, 32, 51, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.55;
+    }
+
+    header {
+      padding: 32px 24px 20px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel);
+    }
+
+    .shell {
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 30px;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      max-width: 900px;
+    }
+
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      padding: 16px 24px;
+      background: rgba(247, 248, 251, 0.96);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(10px);
+    }
+
+    .search-row {
+      display: grid;
+      grid-template-columns: minmax(240px, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    input[type="search"] {
+      width: 100%;
+      padding: 13px 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      font-size: 15px;
+      background: var(--panel);
+      color: var(--text);
+    }
+
+    .count {
+      color: var(--muted);
+      white-space: nowrap;
+      font-size: 14px;
+    }
+
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .filter-btn {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .filter-btn.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+
+    main {
+      padding: 24px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .card-head {
+      padding: 18px 18px 12px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .card-title-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 19px;
+      line-height: 1.35;
+      letter-spacing: 0;
+    }
+
+    .category {
+      flex: 0 0 auto;
+      border-radius: 999px;
+      padding: 5px 9px;
+      background: #eef2f7;
+      color: #334155;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      border: 1px solid #d6e1ff;
+      border-radius: 999px;
+      padding: 3px 8px;
+      background: var(--tag);
+      color: #244174;
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .card-body {
+      padding: 16px 18px 18px;
+    }
+
+    .compare {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .code-box {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    .code-label {
+      padding: 8px 10px;
+      font-weight: 800;
+      font-size: 13px;
+      border-bottom: 1px solid currentColor;
+    }
+
+    .bad .code-label {
+      color: var(--bad-title);
+      background: var(--bad-bg);
+    }
+
+    .good .code-label {
+      color: var(--good-title);
+      background: var(--good-bg);
+    }
+
+    pre {
+      margin: 0;
+      padding: 12px;
+      overflow-x: auto;
+      font-size: 12.5px;
+      line-height: 1.5;
+      tab-size: 2;
+      white-space: pre;
+    }
+
+    .bad pre {
+      background: var(--bad-bg);
+      border-top: 1px solid var(--bad-line);
+    }
+
+    .good pre {
+      background: var(--good-bg);
+      border-top: 1px solid var(--good-line);
+    }
+
+    .tok-comment {
+      color: #667085;
+      font-style: italic;
+    }
+
+    .tok-anno {
+      color: #7c3aed;
+      font-weight: 700;
+    }
+
+    .tok-keyword {
+      color: #1d4ed8;
+      font-weight: 700;
+    }
+
+    .tok-type {
+      color: #0f766e;
+      font-weight: 700;
+    }
+
+    .tok-string {
+      color: #b45309;
+    }
+
+    .tok-number {
+      color: #be123c;
+      font-weight: 650;
+    }
+
+    .problem {
+      margin: 0 0 12px;
+      color: #344054;
+    }
+
+    .interview {
+      margin: 0;
+      padding: 10px 12px;
+      border-left: 4px solid var(--primary);
+      background: #f1f5ff;
+      border-radius: 6px;
+      font-weight: 650;
+    }
+
+    .followups {
+      margin-top: 12px;
+      padding: 12px;
+      border: 1px solid #d9e5ff;
+      border-radius: 8px;
+      background: #f8fbff;
+    }
+
+    .followups-title {
+      margin: 0 0 8px;
+      color: #244174;
+      font-size: 13px;
+      font-weight: 850;
+    }
+
+    .followups ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .followups li {
+      margin: 5px 0;
+      color: #344054;
+    }
+
+    .followup-item {
+      margin: 8px 0;
+      padding: 8px 10px;
+      border: 1px solid #dbe7ff;
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .followup-item summary {
+      cursor: pointer;
+      color: #172033;
+      font-weight: 750;
+      line-height: 1.45;
+    }
+
+    .followup-answer {
+      margin: 8px 0 0;
+      padding-top: 8px;
+      border-top: 1px solid #edf2ff;
+      color: #344054;
+      line-height: 1.6;
+      white-space: pre-line;
+    }
+
+    .empty {
+      display: none;
+      padding: 28px;
+      text-align: center;
+      color: var(--muted);
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+    }
+
+    .tabbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    .tab-btn {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 10px 14px;
+      cursor: pointer;
+      font-weight: 800;
+      font-size: 14px;
+    }
+
+    .tab-btn.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    .flow-hero,
+    .flow-section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 18px;
+      margin-bottom: 18px;
+    }
+
+    .flow-hero h2,
+    .flow-section h2,
+    .flow-section h3 {
+      margin: 0 0 10px;
+    }
+
+    .flow-line {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 12px 0 0;
+    }
+
+    .flow-chip {
+      border: 1px solid #c9d7ff;
+      background: #f4f7ff;
+      color: #244174;
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-weight: 800;
+      font-size: 13px;
+    }
+
+    .tips-grid,
+    .flow-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .tip-card,
+    .flow-step {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      background: #fbfcff;
+    }
+
+    .tip-card h3,
+    .flow-step h3 {
+      font-size: 16px;
+      margin: 0 0 8px;
+    }
+
+    .tip-card ul,
+    .flow-step ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .tip-card li,
+    .flow-step li {
+      margin: 5px 0;
+    }
+
+    .flow-step.warn {
+      border-color: var(--bad-line);
+      background: var(--bad-bg);
+    }
+
+    .flow-step.ok {
+      border-color: var(--good-line);
+      background: var(--good-bg);
+    }
+
+    .flow-relation {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .flow-relation .code-box {
+      background: #fff;
+    }
+
+    @media (max-width: 980px) {
+      .grid,
+      .compare,
+      .tips-grid,
+      .flow-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .search-row {
+        grid-template-columns: 1fr;
+      }
+
+      .count {
+        white-space: normal;
+      }
+    }
+    
+    /* 퀴즈 모드 스타일 */
+    body.blind-mode-active .card:not(.revealed) .good,
+    body.blind-mode-active .card:not(.revealed) .problem,
+    body.blind-mode-active .card:not(.revealed) .interview,
+    body.blind-mode-active .card:not(.revealed) .followups {
+      display: none !important;
+    }
+    body.blind-mode-active .card:not(.revealed) .compare {
+      grid-template-columns: 1fr;
+    }
+    body.blind-mode-active .card:not(.revealed) .quiz-reveal-row {
+      display: block !important;
+    }
+    
+    .quiz-reveal-row {
+      display: none;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    .reveal-btn {
+      width: 100%;
+      padding: 12px;
+      background: #eef3ff;
+      border: 1px dashed var(--primary);
+      color: var(--primary);
+      font-weight: 800;
+      font-size: 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .reveal-btn:hover {
+      background: var(--primary);
+      color: #fff;
+    }
+    
+    /* 개념 정리 탭 스타일 */
+    .concept-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+    .concept-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 24px;
+    }
+    .concept-title {
+      font-size: 20px;
+      font-weight: 850;
+      color: var(--primary);
+      margin: 0 0 16px 0;
+      border-bottom: 2px solid var(--line);
+      padding-bottom: 8px;
+    }
+    .concept-section {
+      margin-bottom: 18px;
+    }
+    .concept-section h4 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--text);
+    }
+    .concept-section h4.easy-header {
+      color: #0f766e;
+    }
+    .concept-section h4.interview-header {
+      color: #b42318;
+    }
+    .easy-box {
+      background: #eefaf6;
+      border-left: 4px solid #0f766e;
+      padding: 12px 16px;
+      border-radius: 6px;
+      line-height: 1.6;
+      color: #0f766e;
+      font-weight: 650;
+    }
+    .interview-box {
+      background: #fff5f5;
+      border-left: 4px solid #b42318;
+      padding: 16px;
+      border-radius: 6px;
+    }
+    .keywords-row {
+      margin-bottom: 10px;
+    }
+    .keyword-badge {
+      display: inline-block;
+      background: #b42318;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 4px;
+      margin-right: 6px;
+      margin-bottom: 6px;
+    }
+    .interview-answer-text {
+      line-height: 1.6;
+      color: #172033;
+      white-space: pre-line;
+    }
+    .concept-code-box {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .concept-code-label {
+      padding: 8px 10px;
+      font-weight: 850;
+      font-size: 13px;
+      color: #244174;
+      background: #eef3ff;
+      border-bottom: 1px solid #c9d7ff;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="shell">
+      <h1>Java/Spring 레거시 안티패턴 빠른 복습</h1>
+      <p class="subtitle">
+        문제를 하나씩 푸는 화면이 아니라, 면접 전에 Controller, Service, Repository, DTO/Entity, Exception, Test, SOLID, Legacy Code 유형을 빠르게 훑어보는 학습 페이지입니다.
+      </p>
+    </div>
+  </header>
+
+  <section class="toolbar">
+    <div class="shell">
+      <div class="search-row">
+        <input id="searchInput" type="search" placeholder="안티패턴 이름, 키워드, 설명으로 검색">
+        <div id="count" class="count"></div>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
+        <div id="filters" class="filters"></div>
+        <button id="blindToggle" class="filter-btn" style="white-space: nowrap; font-weight: bold; background: #fff5f5; border-color: #feb8b8; color: #b42318; border-radius: 999px;">🙈 퀴즈 모드 켜기</button>
+      </div>
+    </div>
+  </section>
+
+  <main>
+    <div class="shell">
+      <nav class="tabbar" aria-label="학습 탭">
+        <button class="tab-btn active" data-tab="cardsPanel">카드 복습</button>
+        <button class="tab-btn" data-tab="flowPanel">전체 코드 흐름 연습</button>
+        <button class="tab-btn" data-tab="conceptPanel">공통 개념 정리</button>
+      </nav>
+
+      <section id="cardsPanel" class="tab-panel active">
+        <section id="cards" class="grid" aria-live="polite"></section>
+        <div id="empty" class="empty">검색 조건에 맞는 카드가 없습니다.</div>
+      </section>
+
+      <section id="flowPanel" class="tab-panel" aria-label="전체 코드 흐름 연습">
+        <section class="flow-hero">
+          <h2>면접 코드 흐름은 이 순서로 먼저 본다</h2>
+          <p class="subtitle">
+            안티패턴 이름을 먼저 외우기보다, 짧은 레거시 코드가 어떤 순서로 흘러가는지 따라가며 위험 지점을 찾는 연습 탭입니다.
+          </p>
+          <div class="flow-line">
+            <span class="flow-chip">입력값</span>
+            <span class="flow-chip">조회</span>
+            <span class="flow-chip">검증</span>
+            <span class="flow-chip">계산</span>
+            <span class="flow-chip">외부 호출</span>
+            <span class="flow-chip">저장</span>
+            <span class="flow-chip">결과 반환</span>
+          </div>
+        </section>
+
+        <section class="flow-section">
+          <h2>계층별 빠른 체크 팁</h2>
+          <div class="tips-grid" id="layerTips"></div>
+        </section>
+
+        <section class="flow-section">
+          <h2>시나리오가 바뀌어도 같은 흐름으로 본다</h2>
+          <div class="tips-grid" id="scenarioVariants"></div>
+        </section>
+
+        <section class="flow-section">
+          <h2>예시 1: 006 Order Cancel에 적용</h2>
+          <div class="flow-relation" id="flowRelation"></div>
+        </section>
+
+        <section class="flow-section">
+          <h2>안티패턴으로 판단하는 기준</h2>
+          <div class="tips-grid">
+            <article class="tip-card">
+              <h3>높음</h3>
+              <ul>
+                <li>Entity를 API 응답으로 직접 반환한다.</li>
+                <li>조회 실패를 임시 Entity 생성으로 숨긴다.</li>
+                <li>클라이언트가 보낸 금액/상태를 서버 결정값처럼 믿는다.</li>
+                <li>외부 PG 호출을 먼저 하고 DB 저장 실패 가능성을 방치한다.</li>
+              </ul>
+            </article>
+            <article class="tip-card">
+              <h3>상황 의존</h3>
+              <ul>
+                <li>Service의 if 분기는 작을 때는 허용되지만, 타입/정책이 늘어나면 OCP 위반 후보가 된다.</li>
+                <li>조회 실패 표현은 Optional, null, 예외, 빈 객체, 빈 목록 등 여러 방식이 있다. 표현 자체보다 Service 흐름에서 실패를 숨기는지가 중요하다.</li>
+                <li>Map은 API 응답 계약에는 부적절하지만, 내부 임시 속성이나 로그 맥락에는 사용할 수 있다.</li>
+                <li>Builder는 생성에는 좋지만 기존 Entity 상태 전이를 대신하는 정답은 아니다.</li>
+              </ul>
+            </article>
+          </div>
+        </section>
+
+        <section class="flow-section">
+          <h2>정답이 하나가 아닐 때 답변하는 기준</h2>
+          <div class="tips-grid" id="decisionMatrix"></div>
+        </section>
+
+        <section class="flow-section">
+          <h2>23번 매트릭스와 공통 개념 연결</h2>
+          <div class="tips-grid" id="conceptCoverage"></div>
+        </section>
+
+        <section class="flow-section">
+          <h2>흐름 단계별 문제 찾기</h2>
+          <div class="flow-grid" id="flowSteps"></div>
+        </section>
+
+        <section class="flow-section">
+          <h2>면접에서 말하는 순서</h2>
+          <pre><code>먼저 전체 요청 흐름을 Controller -> Service -> Repository -> Util 순서로 보겠습니다.
+그 다음 입력값 -> 조회 -> 검증 -> 계산 -> 외부 호출 -> 저장 -> 결과 반환 순서로 따라가며,
+클라이언트 요청값을 신뢰하는지, 조회 실패를 숨기는지, 외부 호출과 DB 저장 순서가 안전한지,
+마지막 응답이 Entity인지 Response DTO인지 확인하겠습니다.</code></pre>
+        </section>
+      </section>
+
+      <section id="conceptPanel" class="tab-panel" aria-label="공통 개념 정리">
+        <section class="flow-hero">
+          <h2>최종 면접 대비 핵심 공통 개념 정리</h2>
+          <p class="subtitle">
+            단순히 암기만 하는 것이 아니라, 직관적인 비유를 통해 메커니즘을 이해하고, 면접장에서 논리적인 키워드 중심으로 답변하는 탭입니다.
+          </p>
+        </section>
+        <div class="concept-grid" id="conceptList"></div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const categories = [
+      "All",
+      "Controller",
+      "Service",
+      "Repository",
+      "DTO / Entity",
+      "Exception",
+      "Test",
+      "SOLID",
+      "Legacy Code",
+      "Util",
+      "AOP",
+      "RDBMS",
+      "JPA / QueryDSL"
+    ];
+
+    const cards = [
+      {
+        name: "Controller에 비즈니스 로직 집중",
+        category: "Controller",
+        keywords: ["Controller 책임 과다", "SRP 위반", "Service 책임 누락"],
+        bad: `@RestController
+class CouponController {
+  private final CouponRepository repo = new CouponRepository();
+
+  @PostMapping("/coupons/use")
+  public String use(CouponUseRequest request) {
+    Coupon coupon = repo.findByCode(request.code);
+    if (coupon == null || coupon.expired) {
+      return "fail";
+    }
+    coupon.used = true;
+    repo.save(coupon);
+    return "ok";
+  }
+}`,
+        good: `@RestController
+class CouponController {
+  private final CouponService service;
+
+  public CouponUseResponse use(
+      @Valid @RequestBody CouponUseRequest request) {
+    return service.use(request);
+  }
+}`,
+        problem: "HTTP 계층이 쿠폰 조회, 만료 판단, 상태 변경, 저장까지 처리한다. Controller가 유스케이스를 직접 수행하면 테스트와 변경이 어려워진다.",
+        interview: "Controller는 요청/응답 경계에 집중하고, 비즈니스 판단과 상태 변경은 Service 유스케이스로 분리해야 합니다."
+      },
+      {
+        name: "Controller가 Service를 직접 new",
+        category: "Controller",
+        keywords: ["직접 new", "DI 누락", "DIP 위반", "테스트 어려움"],
+        bad: `@RestController
+class OrderController {
+  private final OrderService orderService = new OrderService(
+      new OrderRepository(),
+      new OrderCancelUtil()
+  );
+
+  @PostMapping("/orders/cancel")
+  public OrderCancelResponse cancel(@Valid @RequestBody OrderCancelRequest request) {
+    return orderService.cancel(request);
+  }
+}`,
+        good: `@RestController
+class OrderController {
+  private final OrderService orderService;
+
+  OrderController(OrderService orderService) {
+    this.orderService = orderService;
+  }
+
+  @PostMapping("/orders/cancel")
+  public OrderCancelResponse cancel(@Valid @RequestBody OrderCancelRequest request) {
+    return orderService.cancel(request);
+  }
+}`,
+        problem: "Controller가 Service와 그 하위 의존성을 직접 생성하면 Spring DI, AOP, 테스트 대체, 설정 주입 흐름이 깨진다. Controller가 객체 생성 책임까지 가지면서 계층 책임도 섞인다.",
+        interview: "Controller는 Service를 직접 new 하지 않고 생성자 주입으로 받아야 합니다. 그래야 Service의 트랜잭션/AOP 적용, mock 테스트, 구현 교체가 가능해지고 HTTP 계층은 요청/응답 책임에 집중할 수 있습니다."
+      },
+      {
+        name: "Service 없이 Controller에서 검증과 계산 수행",
+        category: "Controller",
+        keywords: ["계층 책임", "Validation", "Transaction Script"],
+        bad: `@PostMapping("/orders")
+public Map<String, Object> order(OrderRequest request) {
+  if (request.amount <= 0) {
+    return Map.of("status", 400);
+  }
+  int finalPrice = request.amount;
+  if ("VIP".equals(request.grade)) {
+    finalPrice = (int) (finalPrice * 0.9);
+  }
+  orderRepository.save(new Order(request.userId, finalPrice));
+  return Map.of("status", 200);
+}`,
+        good: `@PostMapping("/orders")
+public ResponseEntity<OrderResponse> order(
+    @Valid @RequestBody OrderRequest request) {
+  OrderResponse response = orderService.order(request);
+  return ResponseEntity.status(201).body(response);
+}`,
+        problem: "검증, 가격 정책, 저장이 Controller에 섞여 있다. HTTP 상태코드도 Map 안의 숫자로 표현되어 실제 HTTP 응답과 API 계약이 흔들린다.",
+        interview: "Controller에서 계산과 저장까지 처리하면 계층 책임이 무너져 Service 테스트와 트랜잭션 경계를 잡기 어렵습니다."
+      },
+      {
+        name: "Controller가 Entity를 그대로 응답",
+        category: "DTO / Entity",
+        keywords: ["Entity 직접 노출", "DTO/Entity 분리 실패", "API 계약"],
+        bad: `@GetMapping("/users/{id}")
+public User find(Long id) {
+  return userService.find(id);
+}
+
+class User {
+  public Long id;
+  public String email;
+  public String passwordHash;
+  public boolean admin;
+}`,
+        good: `@GetMapping("/users/{id}")
+public UserResponse find(Long id) {
+  User user = userService.find(id);
+  return new UserResponse(user.id(), user.email());
+}
+
+record UserResponse(Long id, String email) {}`,
+        problem: "저장 모델이 API 응답 모델이 되면 내부 필드가 노출되고, DB 모델 변경이 API 변경으로 번진다.",
+        interview: "Entity는 영속 상태를 표현하고 Response DTO는 외부 계약을 표현하므로 둘을 분리해야 합니다."
+      },
+      {
+        name: "Repository에서 비즈니스 판단",
+        category: "Repository",
+        keywords: ["Repository 책임 위반", "계층 책임", "도메인 정책"],
+        bad: `class CouponRepository {
+  public boolean canUse(String code, Long userId) {
+    Coupon coupon = findByCode(code);
+    return coupon != null
+        && !coupon.used
+        && coupon.ownerId.equals(userId)
+        && !coupon.expired;
+  }
+}`,
+        good: `class CouponService {
+  public void use(CouponUseRequest request) {
+    Coupon coupon = couponRepository.findByCode(request.code())
+        .orElseThrow(() -> new CouponNotFoundException(request.code()));
+    coupon.validateOwner(request.userId());
+    coupon.use(clock.now());
+    couponRepository.save(coupon);
+  }
+}`,
+        problem: "Repository가 저장소 접근을 넘어 쿠폰 사용 가능 정책까지 판단한다. 정책 변경 시 저장소 코드가 계속 바뀐다.",
+        interview: "Repository는 조회/저장 책임에 집중하고, 사용 가능 여부 같은 도메인 정책은 Service나 Domain 객체에서 판단해야 합니다."
+      },
+      {
+        name: "Repository가 null 반환",
+        category: "Repository",
+        keywords: ["null 처리", "조회 실패", "NPE 위험"],
+        bad: `class OrderRepository {
+  public Order findById(Long id) {
+    for (Order order : orders) {
+      if (order.id.equals(id)) {
+        return order;
+      }
+    }
+    return null;
+  }
+}`,
+        good: `class OrderRepository {
+  public Optional<Order> findById(Long id) {
+    return orders.stream()
+        .filter(order -> order.id().equals(id))
+        .findFirst();
+  }
+}
+
+Order order = repository.findById(id)
+    .orElseThrow(() -> new OrderNotFoundException(id));`,
+        problem: "조회 실패 가능성이 타입에 드러나지 않아 호출부가 null 처리를 놓치기 쉽다.",
+        interview: "조회 실패가 가능한 Repository 메서드는 Optional이나 명확한 예외 흐름으로 실패 가능성을 드러내야 합니다."
+      },
+      {
+        name: "조회 실패를 빈 객체로 반환",
+        category: "Repository",
+        keywords: ["빈 객체", "기본값", "조회 실패 은폐"],
+        bad: `class OrderRepository {
+  public Order findById(Long id) {
+    return store.getOrDefault(id, Order.empty());
+  }
+}
+
+Order order = orderRepository.findById(request.orderId());
+order.cancel();`,
+        good: `class OrderRepository {
+  public Optional<Order> findById(Long id) {
+    return Optional.ofNullable(store.get(id));
+  }
+}
+
+Order order = orderRepository.findById(request.orderId())
+    .orElseThrow(() -> new OrderNotFoundException(request.orderId()));`,
+        problem: "없는 주문을 빈 객체로 바꾸면 Service는 조회 성공처럼 계속 진행한다. 실패가 빠르게 드러나지 않고 상태 변경/저장 단계에서 데이터 정합성 문제가 생긴다.",
+        interview: "조회 실패는 빈 객체나 기본값으로 숨기기보다, 유스케이스 의미에 맞게 예외나 명확한 실패 결과로 중단해야 합니다."
+      },
+      {
+        name: "Repository가 예외를 직접 던져 흐름을 숨김",
+        category: "Repository",
+        keywords: ["예외 위치", "조회 실패", "계층 책임"],
+        bad: `class OrderRepository {
+  public Order findById(Long id) {
+    Order order = store.get(id);
+    if (order == null) {
+      throw new OrderNotFoundException(id);
+    }
+    return order;
+  }
+}`,
+        good: `class OrderRepository {
+  public Optional<Order> findById(Long id) {
+    return Optional.ofNullable(store.get(id));
+  }
+}
+
+class OrderService {
+  public Order cancel(Long id) {
+    Order order = orderRepository.findById(id)
+        .orElseThrow(() -> new OrderNotFoundException(id));
+    order.cancel();
+    return orderRepository.save(order);
+  }
+}`,
+        problem: "Repository가 무조건 도메인 예외를 던지면 같은 조회 메서드를 다른 유스케이스에서 재사용하기 어렵다. 조회 실패를 어떻게 해석할지는 보통 Service 유스케이스가 결정한다.",
+        interview: "Repository는 값 없음 가능성을 표현하고, Service가 취소/조회/수정 유스케이스에 맞게 404, 빈 결과, 생성 등의 의미를 결정하는 편이 유연합니다."
+      },
+      {
+        name: "목록 조회에서 null 반환",
+        category: "Repository",
+        keywords: ["빈 목록", "null List", "조회 결과 의미"],
+        bad: `class OrderRepository {
+  public List<Order> findByUserId(Long userId) {
+    List<Order> result = query(userId);
+    return result.isEmpty() ? null : result;
+  }
+}
+
+for (Order order : orderRepository.findByUserId(userId)) {
+  order.markViewed();
+}`,
+        good: `class OrderRepository {
+  public List<Order> findByUserId(Long userId) {
+    return query(userId);
+  }
+}
+
+for (Order order : orderRepository.findByUserId(userId)) {
+  order.markViewed();
+}`,
+        problem: "목록 조회에서 결과 없음은 보통 실패가 아니라 빈 결과다. null을 반환하면 호출부마다 방어 코드가 필요하고 반복문에서 NPE가 발생하기 쉽다.",
+        interview: "단건 조회의 값 없음과 목록 조회의 빈 결과는 의미가 다릅니다. 목록은 보통 빈 List로 반환해 흐름을 단순하게 유지합니다."
+      },
+      {
+        name: "Optional.get 직접 호출",
+        category: "Service",
+        keywords: ["Optional 오남용", "예외 흐름", "조회 실패"],
+        bad: `public Order cancel(Long orderId) {
+  Order order = orderRepository.findById(orderId).get();
+  order.cancel();
+  return orderRepository.save(order);
+}`,
+        good: `public Order cancel(Long orderId) {
+  Order order = orderRepository.findById(orderId)
+      .orElseThrow(() -> new OrderNotFoundException(orderId));
+  order.cancel();
+  return orderRepository.save(order);
+}`,
+        problem: "Optional을 반환받았지만 바로 get을 호출하면 값이 없을 때 NoSuchElementException으로 터지고 도메인 의미가 사라진다.",
+        interview: "Optional은 get으로 꺼내기보다 orElseThrow로 조회 실패를 도메인 예외로 바꾸는 편이 안전합니다."
+      },
+      {
+        name: "orElse로 비용 큰 기본값 생성",
+        category: "Service",
+        keywords: ["Optional", "orElse vs orElseGet", "성능"],
+        bad: `Order order = orderRepository.findById(id)
+    .orElse(createDefaultOrder(id));`,
+        good: `Order order = orderRepository.findById(id)
+    .orElseGet(() -> createDefaultOrder(id));`,
+        problem: "orElse의 인자는 Optional에 값이 있어도 먼저 평가된다. 기본값 생성이 비싸거나 부작용이 있으면 불필요한 작업이 발생한다.",
+        interview: "기본값 생성 비용이나 부작용이 있다면 orElse보다 orElseGet으로 지연 생성해야 합니다."
+      },
+      {
+        name: "조회 실패를 임시 Entity 생성으로 숨김",
+        category: "Service",
+        keywords: ["실패 흐름 은폐", "데이터 정합성", "Optional"],
+        bad: `Order order = orderRepository.findById(request.orderId())
+    .orElse(new Order(request.orderId(), request.userId(), 0));
+
+order.cancel();
+orderRepository.save(order);`,
+        good: `Order order = orderRepository.findById(request.orderId())
+    .orElseThrow(() -> new OrderNotFoundException(request.orderId()));
+
+order.validateOwner(request.userId());
+order.cancel();
+orderRepository.save(order);`,
+        problem: "없는 주문을 새 주문처럼 만들어 정상 흐름으로 진행한다. 데이터 정합성 문제가 장애로 늦게 발견된다.",
+        interview: "조회 실패는 기본 Entity로 숨기지 말고 명확한 실패 흐름으로 처리해야 합니다."
+      },
+      {
+        name: "요청값의 서버 결정 상태 신뢰",
+        category: "DTO / Entity",
+        keywords: ["Parameter Tampering", "DTO 설계", "권한 검증"],
+        bad: `class RefundRequest {
+  public Long paymentId;
+  public Long userId;
+  public int refundAmount;
+  public String status;
+}
+
+payment.status = request.status;
+refundPg(request.refundAmount);`,
+        good: `record RefundRequest(Long paymentId, Long userId, String reason) {}
+
+Payment payment = paymentRepository.findById(request.paymentId())
+    .orElseThrow(PaymentNotFoundException::new);
+payment.validateOwner(request.userId());
+int refundAmount = refundPolicy.calculate(payment);
+payment.cancel(refundAmount);`,
+        problem: "환불 금액과 상태는 서버가 저장된 결제 상태로 결정해야 한다. 클라이언트 입력을 신뢰하면 조작 가능성이 생긴다.",
+        interview: "Request DTO에는 사용자의 의도만 받고, 상태와 금액 같은 서버 결정값은 서버에서 계산해야 합니다."
+      },
+      {
+        name: "@Valid 누락과 도메인 검증 혼동",
+        category: "Controller",
+        keywords: ["@Valid", "Bean Validation", "도메인 검증"],
+        bad: `@PostMapping("/reservations")
+public ReservationResponse reserve(
+     ReservationRequest request) {
+  return reservationService.reserve(request);
+}`,
+        good: `@PostMapping("/reservations")
+public ResponseEntity<ReservationResponse> reserve(
+     ReservationRequest request) {
+  ReservationResponse response = reservationService.reserve(request);
+  return ResponseEntity.status(201).body(response);
+}
+
+record ReservationRequest( Long roomId,
+                           LocalDate date) {}`,
+        problem: "형식 검증이 Controller 경계에서 동작하지 않는다. 단, 소유자/상태 전이 같은 도메인 검증은 Service나 Domain에서 별도로 처리해야 한다.",
+        interview: "DTO 형식 검증은 @Valid로 경계에서 막고, 상태 전이나 소유자 검증은 도메인 규칙으로 분리해야 합니다."
+      },
+      {
+        name: "RuntimeException 무분별 사용",
+        category: "Exception",
+        keywords: ["RuntimeException", "도메인 예외", "공통 예외 처리"],
+        bad: `if (order == null) {
+  throw new RuntimeException("error");
+}
+if (!order.ownerId.equals(userId)) {
+  throw new RuntimeException("error");
+}`,
+        good: `if (order == null) {
+  throw new OrderNotFoundException(orderId);
+}
+if (!order.isOwnedBy(userId)) {
+  throw new OrderAccessDeniedException(orderId, userId);
+}`,
+        problem: "원인과 대응이 다른 실패가 모두 같은 예외와 메시지로 표현된다. HTTP 상태 매핑과 FE/QA 시나리오가 불명확해진다.",
+        interview: "실패 원인에 맞는 도메인 예외와 에러 코드를 사용해야 API 실패 계약을 안정적으로 만들 수 있습니다."
+      },
+      {
+        name: "예외 메시지가 너무 모호함",
+        category: "Exception",
+        keywords: ["에러 코드", "API 계약", "협업"],
+        bad: `throw new CouponException("fail");`,
+        good: `throw new CouponAlreadyUsedException(couponId);
+
+record ErrorResponse(String code, String message) {}
+ResponseEntity.status(409)
+    .body(new ErrorResponse("COUPON_ALREADY_USED", "이미 사용한 쿠폰입니다."));`,
+        problem: "fail 같은 메시지는 사용자가 무엇을 고쳐야 하는지, FE/QA가 어떤 케이스를 처리해야 하는지 알기 어렵다.",
+        interview: "예외는 사람이 읽는 메시지뿐 아니라 클라이언트가 분기할 수 있는 에러 코드와 상태코드가 필요합니다."
+      },
+      {
+        name: "Controller catch-all 예외 처리",
+        category: "Controller",
+        keywords: ["ControllerAdvice", "HTTP 상태코드", "예외 매핑"],
+        bad: `try {
+  service.cancel(request);
+  return Map.of("status", 200, "message", "ok");
+} catch (Exception e) {
+  return Map.of("status", 200, "message", e.getMessage());
+}`,
+        good: `@RestControllerAdvice
+class ApiExceptionHandler {
+  @ExceptionHandler(OrderNotFoundException.class)
+  ResponseEntity<ErrorResponse> notFound(OrderNotFoundException e) {
+    return ResponseEntity.status(404)
+        .body(new ErrorResponse("ORDER_NOT_FOUND", e.getMessage()));
+  }
+}`,
+        problem: "실패도 200으로 응답하면 클라이언트와 운영 지표가 실패를 감지하기 어렵다.",
+        interview: "Controller에서 모든 예외를 성공 응답으로 감싸지 말고, 공통 예외 처리에서 도메인 예외를 HTTP 상태로 매핑해야 합니다."
+      },
+      {
+        name: "if문 중첩이 많은 코드",
+        category: "Legacy Code",
+        keywords: ["Spaghetti Code", "가독성", "Clean Code"],
+        bad: `if (order != null) {
+  if ("ACTIVE".equals(order.status)) {
+    if (order.amount > 0) {
+      if (!order.expired) {
+        order.cancel();
+      }
+    }
+  }
+}`,
+        good: `if (order == null) {
+  throw new OrderNotFoundException(id);
+}
+order.validateCancelable();
+order.cancel();`,
+        problem: "조건이 깊게 중첩되면 정상 경로와 실패 경로가 잘 보이지 않고, 조건 하나가 추가될 때 유지보수가 어려워진다.",
+        interview: "깊은 중첩은 guard clause와 도메인 검증 메서드로 분리해 실패 조건을 먼저 드러내는 편이 좋습니다."
+      },
+      {
+        name: "Magic Number 사용",
+        category: "Legacy Code",
+        keywords: ["Magic Number", "정책 하드코딩", "가독성"],
+        bad: `int fee = amount < 30000 ? 3000 : 0;
+if (cancelMinutes > 30) {
+  refund = (int) (amount * 0.9);
+}`,
+        good: `private static final int FREE_DELIVERY_MIN_AMOUNT = 30_000;
+private static final int DEFAULT_DELIVERY_FEE = 3_000;
+private static final int CANCEL_LIMIT_MINUTES = 30;
+
+int fee = amount < FREE_DELIVERY_MIN_AMOUNT ? DEFAULT_DELIVERY_FEE : 0;`,
+        problem: "숫자가 어떤 정책을 의미하는지 코드만 보고 알기 어렵다. 정책 변경 시 흩어진 숫자를 찾아야 한다.",
+        interview: "정책 숫자는 이름 있는 상수나 설정으로 분리해 의미와 변경 지점을 명확히 해야 합니다."
+      },
+      {
+        name: "중복 코드",
+        category: "Legacy Code",
+        keywords: ["중복 로직", "Clean Code", "변경 비용"],
+        bad: `if (grade.equals("VIP")) {
+  price = (int) (price * 0.9);
+}
+if (grade.equals("VIP")) {
+  total = (int) (total * 0.9);
+}`,
+        good: `class DiscountPolicy {
+  int discount(String grade, int amount) {
+    if ("VIP".equals(grade)) {
+      return (int) (amount * 0.9);
+    }
+    return amount;
+  }
+}`,
+        problem: "같은 정책이 여러 곳에 있으면 변경 누락이 생긴다. 특히 할인율, 상태 전이, 권한 검증 중복은 장애로 이어지기 쉽다.",
+        interview: "반복되는 정책은 한 곳의 Policy나 Domain 메서드로 모아 변경 지점을 줄여야 합니다."
+      },
+      {
+        name: "static mutable list 저장소",
+        category: "Repository",
+        keywords: ["static mutable state", "테스트 격리", "동시성"],
+        bad: `class UserRepository {
+  private static final List<User> users = new ArrayList<>();
+
+  public List<User> findAll() {
+    return users;
+  }
+}`,
+        good: `class UserRepository {
+  private final Map<Long, User> users = new ConcurrentHashMap<>();
+
+  public List<User> findAll() {
+    return List.copyOf(users.values());
+  }
+}`,
+        problem: "static mutable 상태는 테스트 간 데이터가 섞이고 동시 요청에서 일관성이 깨질 수 있다. 내부 컬렉션을 그대로 반환하면 캡슐화도 깨진다.",
+        interview: "공유 mutable 저장소를 그대로 노출하지 말고, 실제 저장소나 테스트용 fake를 분리하고 방어적 복사를 고려해야 합니다."
+      },
+      {
+        name: "Repository findAll 후 애플리케이션 필터링",
+        category: "Repository",
+        keywords: ["조회 성능", "조건 조회", "인덱스"],
+        bad: `List<Order> orders = orderRepository.findAll();
+return orders.stream()
+    .filter(order -> order.userId.equals(userId))
+    .filter(order -> order.status.equals("PAID"))
+    .toList();`,
+        good: `return orderRepository.findPaidOrdersByUserId(userId);
+
+interface OrderRepository {
+  List<Order> findPaidOrdersByUserId(Long userId);
+}`,
+        problem: "목록 전체를 가져와 애플리케이션에서 거르면 데이터가 많아질수록 비용이 커진다. 실제 DB라면 조건 조회, 인덱스, 페이징을 의심해야 한다.",
+        interview: "조회 조건은 가능한 저장소 계층에 명확히 표현하고, 목록 API는 인덱스와 페이징 관점까지 같이 봐야 합니다."
+      },
+      {
+        name: "반복문 안 Repository 조회",
+        category: "Repository",
+        keywords: ["N+1 유사 문제", "반복 조회", "성능"],
+        bad: `for (Long productId : request.productIds()) {
+  Product product = productRepository.findById(productId)
+      .orElseThrow();
+  items.add(new OrderItem(product));
+}`,
+        good: `List<Product> products =
+    productRepository.findAllById(request.productIds());
+
+for (Product product : products) {
+  items.add(new OrderItem(product));
+}`,
+        problem: "반복마다 저장소를 호출하면 데이터 수만큼 조회가 늘어난다. 실제 DB에서는 실행 횟수와 쿼리 계획을 확인해야 한다.",
+        interview: "반복 조회는 일괄 조회로 바꾸고, DB 환경에서는 N+1 또는 과도한 round-trip 가능성을 의심해야 합니다."
+      },
+      {
+        name: "Repository save가 항상 add",
+        category: "Repository",
+        keywords: ["생성/수정 의미 혼동", "데이터 중복", "정합성"],
+        bad: `public DeliveryAddress save(DeliveryAddress address) {
+  addresses.add(address);
+  return address;
+}`,
+        good: `public DeliveryAddress save(DeliveryAddress address) {
+  addresses.put(address.orderId(), address);
+  return address;
+}`,
+        problem: "변경 유스케이스에서도 add만 하면 같은 식별자의 데이터가 여러 개 쌓이고 어떤 값을 읽어야 하는지 불명확해진다.",
+        interview: "save가 생성인지 수정인지 기준을 분명히 하고, 식별자 기준으로 기존 데이터를 갱신해야 합니다."
+      },
+      {
+        name: "System.out.println 로그",
+        category: "Legacy Code",
+        keywords: ["Logging", "Monitoring", "운영 추적"],
+        bad: `System.out.println("refund ok " + userId);
+System.out.println("error " + e.getMessage());`,
+        good: `private static final Logger log =
+    LoggerFactory.getLogger(RefundService.class);
+
+log.info("refund completed. paymentId={}, userId={}", paymentId, userId);
+log.warn("refund rejected. paymentId={}, reason={}", paymentId, reason);`,
+        problem: "표준 출력은 로그 레벨, 구조화 필드, 추적 ID, 수집 시스템 연동이 어렵다. 운영 장애 분석에 필요한 맥락도 부족해진다.",
+        interview: "운영 로그는 Logger로 레벨과 식별자를 남기고, 개인정보와 추적 가능성을 함께 고려해야 합니다."
+      },
+      {
+        name: "Util에 비즈니스 정책과 알림 책임 혼재",
+        category: "Util",
+        keywords: ["Util 책임", "Policy 분리", "테스트 가능성"],
+        bad: `class RefundUtil {
+  static boolean canRefund(Payment payment) {
+    return payment.amount > 0 && !"WEEKEND".equals(today());
+  }
+
+  static void sendNotice(Long userId) {
+    System.out.println("refund notice " + userId);
+  }
+}`,
+        good: `class RefundPolicy {
+  boolean canRefund(Payment payment, LocalDate today) {
+    return payment.isPaid() && !holidayPolicy.isBlocked(today);
+  }
+}
+
+class RefundNotifier {
+  void send(Long userId) {
+    mailClient.send(userId);
+  }
+}`,
+        problem: "순수 유틸처럼 보이지만 환불 정책과 알림 부작용이 섞여 있다. 테스트 대체와 정책 변경이 어려워진다.",
+        interview: "순수 계산 유틸이 아니라 정책이나 알림 책임이면 Policy, Validator, Notifier 같은 컴포넌트로 분리해야 합니다."
+      },
+      {
+        name: "DIP 위반: 구현체 직접 생성",
+        category: "SOLID",
+        keywords: ["DIP 위반", "DI", "테스트 대체 어려움"],
+        bad: `class PaymentService {
+  private final PgClient pgClient = new RealPgClient();
+  private final PaymentRepository repository = new PaymentRepository();
+}`,
+        good: `class PaymentService {
+  private final PgClient pgClient;
+  private final PaymentRepository repository;
+
+  PaymentService(PgClient pgClient, PaymentRepository repository) {
+    this.pgClient = pgClient;
+    this.repository = repository;
+  }
+}`,
+        problem: "Service가 구체 구현을 직접 생성하면 테스트에서 fake/mock으로 대체하기 어렵고, 구현 변경이 Service 변경으로 이어진다.",
+        interview: "Service는 구체 구현 생성 책임을 갖지 말고 인터페이스나 추상화에 의존하도록 DI를 사용해야 합니다."
+      },
+      {
+        name: "OCP 위반: 타입별 if/switch 증가",
+        category: "SOLID",
+        keywords: ["OCP 위반", "Strategy", "정책 분리"],
+        bad: `if ("NORMAL".equals(order.type)) {
+  refund = order.amount;
+} else if ("PREORDER".equals(order.type)) {
+  refund = (int) (order.amount * 0.9);
+} else if ("DIGITAL".equals(order.type)) {
+  throw new CannotRefundException();
+}`,
+        good: `interface RefundPolicy {
+  boolean supports(OrderType type);
+  int refundAmount(Order order);
+}
+
+RefundPolicy policy = policies.stream()
+    .filter(p -> p.supports(order.type()))
+    .findFirst()
+    .orElseThrow(UnsupportedOrderTypeException::new);`,
+        problem: "타입이 추가될 때마다 기존 Service if/switch를 수정해야 한다. 정책이 늘수록 변경 영향과 테스트 범위가 커진다.",
+        interview: "타입별 정책이 계속 늘어난다면 Strategy나 Policy 객체로 분리해 확장에는 열리고 수정에는 닫히게 만드는 편이 좋습니다."
+      },
+      {
+        name: "SRP 위반: Service가 모든 일을 처리",
+        category: "SOLID",
+        keywords: ["SRP 위반", "God Object", "Service 책임 과다"],
+        bad: `class OrderService {
+  void order(OrderRequest request) {
+    validate(request);
+    int price = calculate(request);
+    repository.save(new Order(price));
+    emailClient.send(request.email);
+    auditRepository.save("ordered");
+  }
+}`,
+        good: `class OrderService {
+  void order(OrderRequest request) {
+    Order order = orderFactory.create(request);
+    orderRepository.save(order);
+    orderEventPublisher.ordered(order);
+  }
+}`,
+        problem: "검증, 가격 계산, 저장, 알림, 감사 로그가 한 Service에 모여 있다. 변경 이유가 여러 개라 회귀 위험이 커진다.",
+        interview: "Service 유스케이스가 너무 많은 책임을 가지면 정책, 알림, 감사 기록 같은 변경 축을 분리해야 합니다."
+      },
+      {
+        name: "God Object",
+        category: "Legacy Code",
+        keywords: ["God Object", "책임 분리 실패", "Legacy Code"],
+        bad: `class UserManager {
+  void join(UserRequest request) {}
+  void login(String email, String password) {}
+  void sendMail(Long userId) {}
+  void calculatePoint(Long userId) {}
+  void writeAuditLog(String message) {}
+  void exportCsv() {}
+}`,
+        good: `class UserJoinService {}
+class AuthService {}
+class MailService {}
+class PointService {}
+class AuditLogger {}
+class UserReportExporter {}`,
+        problem: "한 클래스가 여러 업무 영역을 모두 알고 처리한다. 수정 이유가 많아지고 테스트 범위가 커진다.",
+        interview: "God Object는 변경 이유가 너무 많은 클래스이므로 유스케이스나 책임 축으로 쪼개야 합니다."
+      },
+      {
+        name: "Spaghetti Code",
+        category: "Legacy Code",
+        keywords: ["Spaghetti Code", "흐름 제어", "유지보수"],
+        bad: `public String process(Request r) {
+  if (r == null) return "A";
+  if (r.type.equals("X")) save(r);
+  else if (r.type.equals("Y")) notify(r);
+  if (r.amount > 0) log(r);
+  if (r.userId == null) return "B";
+  return "OK";
+}`,
+        good: `public ProcessResult process(Request request) {
+  Request validRequest = validator.validate(request);
+  ProcessCommand command = commandFactory.from(validRequest);
+  return command.execute();
+}`,
+        problem: "검증, 분기, 저장, 알림, 반환 코드가 한 흐름에 섞여 의도를 파악하기 어렵다.",
+        interview: "Spaghetti Code는 흐름을 유스케이스 단계와 정책 객체로 나누어 읽을 수 있는 구조로 바꿔야 합니다."
+      },
+      {
+        name: "트랜잭션 위치가 애매한 코드",
+        category: "Service",
+        keywords: ["@Transactional", "Transaction boundary", "상태 변경"],
+        bad: `public void cancel(Long orderId) {
+  Order order = repository.findById(orderId).orElseThrow();
+  order.cancel();
+  repository.save(order);
+}
+
+private void cancelInternal(Order order) {
+  order.cancel();
+  repository.save(order);
+}`,
+        good: `@Transactional
+public void cancel(Long orderId) {
+  Order order = repository.findById(orderId).orElseThrow();
+  order.cancel();
+  repository.save(order);
+}`,
+        problem: "상태 변경 유스케이스의 경계가 명확하지 않다. 내부 메서드에만 트랜잭션을 기대하면 Spring AOP 프록시를 거치지 않을 수 있다.",
+        interview: "트랜잭션은 보통 상태 변경 유스케이스의 public Service 경계에 두고, self-invocation 오해를 피해야 합니다."
+      },
+      {
+        name: "트랜잭션 안 외부 호출",
+        category: "Service",
+        keywords: ["외부 호출 순서", "Transaction boundary", "실무 장애"],
+        bad: `@Transactional
+public void refund(Long paymentId) {
+  Payment payment = repository.findById(paymentId).orElseThrow();
+  pgClient.refund(payment.pgKey());
+  payment.refunded();
+  repository.save(payment);
+}`,
+        good: `@Transactional
+public RefundCommand markRefundRequested(Long paymentId) {
+  Payment payment = repository.findById(paymentId).orElseThrow();
+  payment.requestRefund();
+  repository.save(payment);
+  return RefundCommand.from(payment);
+}
+
+pgClient.refund(command.pgKey());
+refundService.markRefundCompleted(command.paymentId());`,
+        problem: "외부 PG 호출 성공 후 DB 저장이 실패하거나, DB 락을 잡은 채 외부 지연이 발생할 수 있다. 호출 순서와 보상 전략을 설명해야 한다.",
+        interview: "외부 호출과 DB 트랜잭션을 분리할 때도 후속 상태 반영, 재시도, outbox나 보상 처리까지 함께 설계해야 합니다."
+      },
+      {
+        name: "readOnly 트랜잭션 오해",
+        category: "Service",
+        keywords: ["readOnly", "@Transactional", "조회 전용"],
+        bad: `@Transactional
+public List<OrderResponse> findOrders(Long userId) {
+  return repository.findByUserId(userId).stream()
+      .map(OrderResponse::from)
+      .toList();
+}`,
+        good: `@Transactional(readOnly = true)
+public List<OrderResponse> findOrders(Long userId) {
+  return repository.findByUserId(userId).stream()
+      .map(OrderResponse::from)
+      .toList();
+}`,
+        problem: "조회 전용 메서드와 상태 변경 메서드의 트랜잭션 의도가 구분되지 않는다. 단, readOnly가 모든 성능 문제를 해결한다는 식으로 말하면 위험하다.",
+        interview: "조회 전용 유스케이스는 readOnly로 의도를 드러낼 수 있지만, 성능은 조회 조건과 인덱스까지 함께 봐야 합니다."
+      },
+      {
+        name: "문자열 상태값 하드코딩",
+        category: "DTO / Entity",
+        keywords: ["문자열 상태값", "Enum", "상태 전이"],
+        bad: `if ("WAIT".equals(order.status)) {
+  order.status = "PAID";
+}
+if ("CANCEL".equals(request.status)) {
+  order.status = "CANCELED";
+}`,
+        good: `enum OrderStatus {
+  WAIT, PAID, CANCELED;
+
+  boolean canPay() {
+    return this == WAIT;
+  }
+}`,
+        problem: "오타와 허용되지 않는 상태가 런타임까지 숨어 있을 수 있다. 상태 전이 규칙도 흩어진 if문에 묻힌다.",
+        interview: "상태값은 enum과 상태 전이 메서드로 표현해 허용 상태와 전이 규칙을 코드에 드러내는 편이 안전합니다."
+      },
+      {
+        name: "public field Entity",
+        category: "DTO / Entity",
+        keywords: ["캡슐화", "Entity responsibility", "Anemic Domain Model"],
+        bad: `class Order {
+  public Long id;
+  public String status;
+  public int amount;
+}
+
+order.status = "CANCELED";
+order.amount = 0;`,
+        good: `class Order {
+  private OrderStatus status;
+  private int amount;
+
+  void cancel() {
+    if (!status.canCancel()) {
+      throw new InvalidOrderStatusException();
+    }
+    this.status = OrderStatus.CANCELED;
+  }
+}`,
+        problem: "외부에서 Entity 상태를 마음대로 바꾸면 도메인 규칙을 통제할 수 없다.",
+        interview: "Entity 상태 변경은 메서드로 감싸 불변 조건과 상태 전이 규칙을 지키도록 해야 합니다."
+      },
+      {
+        name: "테스트가 실행되지 않거나 검증이 없음",
+        category: "Test",
+        keywords: ["JUnit", "assertion 부족", "실패 케이스 누락"],
+        bad: `class OrderServiceTest {
+  public void cancel_success() {
+    service.cancel(1L);
+  }
+}`,
+        good: `class OrderServiceTest {
+  @Test
+  void cancel_success() {
+    Order order = service.cancel(1L);
+    assertThat(order.status()).isEqualTo(OrderStatus.CANCELED);
+  }
+
+  @Test
+  void cancel_rejects_not_owner() {
+    assertThatThrownBy(() -> service.cancel(1L, 99L))
+        .isInstanceOf(OrderAccessDeniedException.class);
+  }
+}`,
+        problem: "@Test가 없거나 assertion이 없으면 실제로 동작을 고정하지 못한다. 성공 케이스만 있으면 권한/상태 실패가 누락된다.",
+        interview: "테스트는 실행 가능해야 하고, 성공뿐 아니라 조회 실패, 권한 실패, 상태 불가 같은 핵심 실패 케이스를 고정해야 합니다."
+      },
+      {
+        name: "시간값 직접 호출로 테스트 어려움",
+        category: "Test",
+        keywords: ["LocalDateTime.now", "Clock", "테스트 가능성"],
+        bad: `boolean expired(Coupon coupon) {
+  return LocalDateTime.now().isAfter(coupon.expiredAt);
+}`,
+        good: `class CouponPolicy {
+  private final Clock clock;
+
+  boolean expired(Coupon coupon) {
+    return LocalDateTime.now(clock).isAfter(coupon.expiredAt());
+  }
+}`,
+        problem: "현재 시간을 직접 호출하면 만료/취소 가능 시간 테스트가 실행 시점에 따라 흔들린다.",
+        interview: "시간 기준 정책은 Clock 같은 의존성을 주입해 테스트에서 고정할 수 있게 만드는 편이 좋습니다."
+      },
+      {
+        name: "API 응답을 Map으로 구성",
+        category: "Controller",
+        keywords: ["Map<String,Object>", "Response DTO", "API 계약"],
+        bad: `return Map.of(
+    "status", 200,
+    "result", order,
+    "message", "ok"
+);`,
+        good: `record OrderResponse(Long orderId, String status) {}
+
+return ResponseEntity.ok(
+    new OrderResponse(order.id(), order.status().name())
+);`,
+        problem: "Map 응답은 빠르게 만들 수 있지만 필드 스펙이 코드 타입으로 고정되지 않아 FE/QA와 API 계약이 불명확해진다.",
+        interview: "운영 API 응답은 Map보다 명시적인 Response DTO로 계약을 드러내는 것이 안전합니다."
+      },
+      {
+        name: "ResponseEntity를 Service에서 반환",
+        category: "Service",
+        keywords: ["HTTP 책임 침범", "계층 분리", "ResponseEntity"],
+        bad: `class OrderService {
+  public ResponseEntity<?> cancel(Long id) {
+    if (id == null) {
+      return ResponseEntity.badRequest().body("bad");
+    }
+    return ResponseEntity.ok("ok");
+  }
+}`,
+        good: `class OrderService {
+  public OrderCancelResult cancel(Long id) {
+    if (id == null) {
+      throw new InvalidOrderRequestException();
+    }
+    return new OrderCancelResult(id);
+  }
+}
+
+class OrderController {
+  ResponseEntity<OrderCancelResponse> cancel(Long id) {
+    return ResponseEntity.ok(OrderCancelResponse.from(service.cancel(id)));
+  }
+}`,
+        problem: "Service가 HTTP 상태와 응답 본문을 만들면 웹 계층에 종속되고 재사용/테스트가 어려워진다.",
+        interview: "ResponseEntity는 Controller의 HTTP 응답 표현이고, Service는 도메인 결과나 예외를 반환하는 편이 좋습니다."
+      },
+      {
+        name: "Controller 응답 형태를 하나의 정답으로 단정",
+        category: "Controller",
+        keywords: ["ResponseEntity", "Response DTO", "@ResponseStatus", "HTTP 계약", "트레이드오프"],
+        bad: `@PostMapping("/orders")
+public OrderResponse create(@RequestBody OrderRequest request) {
+  return orderService.create(request);
+}
+
+// "Controller는 무조건 ResponseEntity<DTO>만 정답입니다."`,
+        good: `@PostMapping("/orders")
+public ResponseEntity<OrderResponse> create(@Valid @RequestBody OrderRequest request) {
+  OrderResponse response = orderService.create(request);
+  return ResponseEntity.created(URI.create("/orders/" + response.id()))
+      .body(response);
+}
+
+@GetMapping("/orders/{id}")
+public OrderResponse find(@PathVariable Long id) {
+  return orderService.find(id);
+}`,
+        problem: "Controller 응답은 항상 한 가지 형태만 맞는 것이 아니다. 상태코드, 헤더, Location, 빈 본문, 파일 다운로드처럼 HTTP 표현을 세밀하게 제어해야 하면 ResponseEntity가 유리하고, 단순 200 JSON 조회는 Response DTO 직접 반환도 충분할 수 있다.",
+        interview: "면접에서는 'ResponseEntity<DTO>가 유일한 정답'이라고 단정하지 말고, HTTP 상태/헤더 제어가 필요한지와 API 계약을 얼마나 명시해야 하는지 기준으로 선택하겠다고 답하는 편이 좋습니다."
+      },
+      {
+        name: "Service 반환 타입을 DTO 하나로만 고정",
+        category: "Service",
+        keywords: ["Service 반환 타입", "Response DTO", "Result 객체", "Entity 반환", "계층 경계"],
+        bad: `class OrderService {
+  public ResponseEntity<OrderResponse> cancel(Long id) {
+    Order order = orderRepository.findById(id).orElseThrow();
+    order.cancel();
+    return ResponseEntity.ok(OrderResponse.from(order));
+  }
+}`,
+        good: `class OrderService {
+  public OrderCancelResult cancel(Long id) {
+    Order order = orderRepository.findById(id).orElseThrow();
+    order.cancel();
+    return OrderCancelResult.from(order);
+  }
+}
+
+class OrderController {
+  ResponseEntity<OrderCancelResponse> cancel(Long id) {
+    return ResponseEntity.ok(OrderCancelResponse.from(service.cancel(id)));
+  }
+}`,
+        problem: "Service가 반드시 Response DTO만 반환해야 하는 것도 아니고, 항상 Entity만 반환해야 하는 것도 아니다. 외부 API 계약과 분리된 Result/CommandResult를 반환하면 Controller의 HTTP 변환과 Service 유스케이스 결과를 나누기 쉽다.",
+        interview: "Service 반환은 도메인 Entity, Result 객체, 내부 DTO 중 맥락에 따라 선택하되, ResponseEntity처럼 HTTP 계층 타입을 Service로 끌고 내려오지는 않겠다고 설명하면 좋습니다."
+      },
+      {
+        name: "DTO 변환 위치를 무조건 Controller로 몰아감",
+        category: "DTO / Entity",
+        keywords: ["DTO 변환 위치", "Mapper", "Response DTO", "Service", "Controller"],
+        bad: `@GetMapping("/orders/{id}")
+public OrderResponse find(@PathVariable Long id) {
+  Order order = orderService.findEntity(id);
+  return new OrderResponse(
+      order.id(),
+      order.status().name(),
+      order.user().email(),
+      order.payment().cardNo()
+  );
+}`,
+        good: `@GetMapping("/orders/{id}")
+public OrderResponse find(@PathVariable Long id) {
+  return orderService.findResponse(id);
+}
+
+class OrderService {
+  OrderResponse findResponse(Long id) {
+    Order order = orderRepository.findById(id).orElseThrow();
+    return OrderResponse.from(order);
+  }
+}`,
+        problem: "작은 조회 API에서는 Controller에서 Response DTO로 변환해도 되지만, 조립 규칙이 커지거나 Lazy Loading, 민감정보 제외, 여러 Repository 조회가 섞이면 Controller가 과책임이 된다.",
+        interview: "DTO 변환 위치는 팀 규칙과 복잡도에 따라 달라질 수 있습니다. 단순 변환은 Controller/DTO factory가 가능하고, 유스케이스 결과 조립은 Service나 Mapper로 분리해 Controller를 얇게 유지하겠습니다."
+      },
+      {
+        name: "리팩토링 우선순위 없이 전부 고치려 함",
+        category: "Legacy Code",
+        keywords: ["리팩토링 우선순위", "면접 답변", "Legacy Refactoring"],
+        bad: `"전부 DTO로 바꾸고, 전부 enum으로 바꾸고,
+전부 인터페이스로 나누고, 테스트도 전부 작성하겠습니다."`,
+        good: `"먼저 장애 가능성이 큰 입력 검증, 권한 검증,
+트랜잭션/외부 호출 순서를 고정하겠습니다.
+그 다음 DTO/Entity 분리와 정책 객체 분리를 진행하겠습니다."`,
+        problem: "레거시 코드에서 모든 문제를 한 번에 고치겠다고 하면 위험도가 크다. 먼저 장애와 데이터 정합성에 직결되는 부분을 골라야 한다.",
+        interview: "면접에서는 모든 개선을 나열하기보다 먼저 고칠 2~3개와 그 이유를 우선순위로 설명해야 합니다."
+      },
+      {
+        name: "Mapper 변환 책임이 Controller에 몰림",
+        category: "DTO / Entity",
+        keywords: ["Mapper", "DTO 변환", "Controller 책임"],
+        bad: `@PostMapping("/payments")
+public PaymentResponse pay(PaymentRequest request) {
+  Payment payment = new Payment();
+  payment.userId = request.userId;
+  payment.amount = request.amount;
+  payment.status = "READY";
+  Payment saved = paymentService.pay(payment);
+  return new PaymentResponse(saved.id, saved.status);
+}`,
+        good: `@PostMapping("/payments")
+public PaymentResponse pay(@Valid @RequestBody PaymentRequest request) {
+  PaymentResult result = paymentService.pay(request);
+  return PaymentResponse.from(result);
+}
+
+class PaymentService {
+  PaymentResult pay(PaymentRequest request) {
+    Payment payment = Payment.create(request.userId(), request.amount());
+    return PaymentResult.from(paymentRepository.save(payment));
+  }
+}`,
+        problem: "Controller가 Entity 생성과 상태 초기화까지 담당한다. 변환 책임이 계층 경계를 흐리게 만들고, 서버 결정값 초기화가 HTTP 계층에 새어 나온다.",
+        interview: "Controller는 요청 DTO를 Service로 전달하고, Entity 생성과 서버 결정값 초기화는 Service나 Domain factory에서 처리하는 편이 좋습니다."
+      },
+      {
+        name: "record DTO를 무조건 정답처럼 사용",
+        category: "DTO / Entity",
+        keywords: ["Java record", "DTO 설계", "Validation"],
+        bad: `record UserUpdateRequest(
+    Long userId,
+    String role,
+    String status,
+    LocalDateTime createdAt
+) {}`,
+        good: `record UserUpdateRequest(
+    @NotBlank String nickname
+) {}
+
+class UserService {
+  void update(Long userId, UserUpdateRequest request) {
+    User user = userRepository.findById(userId).orElseThrow();
+    user.changeNickname(request.nickname());
+  }
+}`,
+        problem: "record 자체는 불변 DTO에 적합하지만, 서버가 결정해야 할 role, status, createdAt까지 Request에 넣으면 입력 신뢰 문제가 생긴다.",
+        interview: "record는 DTO 표현 방식일 뿐이고, 어떤 필드를 외부 입력으로 받을지와 검증 책임을 먼저 판단해야 합니다."
+      },
+      {
+        name: "Optional을 필드나 파라미터로 사용",
+        category: "Service",
+        keywords: ["Optional 필드", "Optional 파라미터", "API 설계"],
+        bad: `class SearchRequest {
+  public Optional<String> keyword;
+}
+
+public List<Order> search(Optional<Long> userId) {
+  return repository.search(userId);
+}`,
+        good: `record SearchRequest(String keyword) {}
+
+public List<Order> search(Long userId) {
+  if (userId == null) {
+    return repository.findRecent();
+  }
+  return repository.findByUserId(userId);
+}`,
+        problem: "Optional은 반환값에서 부재 가능성을 표현하는 용도에 가깝다. 필드나 파라미터에 쓰면 직렬화, 호출부, 검증이 복잡해진다.",
+        interview: "Optional은 주로 반환 타입에서 조회 실패 가능성을 드러내고, DTO 필드나 파라미터에는 신중하게 사용해야 합니다."
+      },
+      {
+        name: "Optional<List<T>>로 빈 목록과 실패 혼동",
+        category: "Repository",
+        keywords: ["Optional<List>", "빈 목록", "조회 의미"],
+        bad: `Optional<List<Order>> findByUserId(Long userId);
+
+List<Order> orders = repository.findByUserId(userId)
+    .orElseThrow(() -> new OrderNotFoundException());`,
+        good: `List<Order> findByUserId(Long userId);
+
+List<Order> orders = repository.findByUserId(userId);`,
+        problem: "목록 조회에서 결과가 없는 것은 보통 실패가 아니라 빈 목록이다. Optional<List>는 빈 목록과 조회 실패 의미를 혼동시킬 수 있다.",
+        interview: "단건 조회는 Optional이 자연스럽지만, 목록 조회는 보통 빈 List로 결과 없음 상태를 표현합니다."
+      },
+      {
+        name: "Map 사용이 항상 나쁘다고 단정",
+        category: "Controller",
+        keywords: ["Map 트레이드오프", "API 계약", "운영 코드"],
+        bad: `return Map.of("a", 1, "b", order, "ok", true);`,
+        good: `record OrderResponse(Long id, String status) {}
+
+Map<String, Object> attributes = Map.of(
+    "orderId", order.id(),
+    "status", order.status()
+);`,
+        problem: "운영 API 응답에서 Map은 계약이 약하지만, 내부 로그나 임시 속성 전달에서는 실용적일 수 있다. 맥락 없이 무조건 나쁘다고 말하면 단정적이다.",
+        interview: "외부 API 계약은 DTO가 안전하고, 내부 임시 데이터나 로그 속성은 Map을 쓸 수 있어 맥락을 구분해야 합니다."
+      },
+      {
+        name: "권한/소유자 검증 누락",
+        category: "Service",
+        keywords: ["권한 검증", "소유자 검증", "요청 userId 신뢰"],
+        bad: `public Order cancel(CancelRequest request) {
+  Order order = orderRepository.findById(request.orderId())
+      .orElseThrow();
+  order.cancel();
+  return orderRepository.save(order);
+}`,
+        good: `public Order cancel(CancelRequest request) {
+  Order order = orderRepository.findById(request.orderId())
+      .orElseThrow();
+  order.validateOwner(request.userId());
+  order.cancel();
+  return orderRepository.save(order);
+}`,
+        problem: "요청한 userId와 저장된 주문 소유자를 비교하지 않으면 다른 사용자의 주문을 취소할 수 있다.",
+        interview: "상태 변경 유스케이스에서는 요청 사용자를 그대로 믿지 말고 저장된 ownerId와 비교해 권한을 검증해야 합니다."
+      },
+      {
+        name: "중복 요청에 대한 idempotency 부재",
+        category: "Service",
+        keywords: ["동시성", "idempotency", "중복 요청"],
+        bad: `public void pay(PayRequest request) {
+  pgClient.pay(request.paymentKey(), request.amount());
+  paymentRepository.save(new Payment(request.orderId(), "PAID"));
+}`,
+        good: `public PaymentResult pay(PayRequest request) {
+  Payment payment = paymentRepository.findByRequestKey(request.requestKey())
+      .orElseGet(() -> paymentRepository.insertPending(
+          request.orderId(), request.requestKey()));
+
+  if (payment.isCompleted()) {
+    return PaymentResult.from(payment);
+  }
+
+  pgClient.pay(request.paymentKey(), request.amount(), request.requestKey());
+  payment.complete();
+  return PaymentResult.from(paymentRepository.save(payment));
+}`,
+        problem: "네트워크 재시도나 더블클릭으로 같은 요청이 여러 번 들어오면 결제나 상태 변경이 중복될 수 있다.",
+        interview: "결제나 취소처럼 부작용이 큰 유스케이스는 unique한 요청 키로 선점하고, 재시도 시 기존 결과를 반환하며, 외부 PG에도 idempotency key를 전달해야 합니다."
+      },
+      {
+        name: "Exception 400/404/409 구분 없음",
+        category: "Exception",
+        keywords: ["400 404 409", "ErrorCode", "ControllerAdvice"],
+        bad: `if (request.amount() <= 0) {
+  throw new RuntimeException("fail");
+}
+if (order == null) {
+  throw new RuntimeException("fail");
+}
+if (order.cancelled()) {
+  throw new RuntimeException("fail");
+}`,
+        good: `if (request.amount() <= 0) {
+  throw new InvalidOrderRequestException();
+}
+if (order == null) {
+  throw new OrderNotFoundException();
+}
+if (order.cancelled()) {
+  throw new OrderAlreadyCancelledException();
+}`,
+        problem: "입력 오류, 리소스 없음, 상태 충돌은 클라이언트 대응이 다르다. 모두 같은 예외로 처리하면 API 계약이 약해진다.",
+        interview: "실패 원인에 따라 400, 404, 409를 구분하고 공통 예외 처리에서 일관된 ErrorResponse로 매핑해야 합니다."
+      },
+      {
+        name: "Test에서 외부 의존성을 대체하지 못함",
+        category: "Test",
+        keywords: ["fake", "mock", "외부 의존성", "테스트 격리"],
+        bad: `class RefundServiceTest {
+  @Test
+  void refund() {
+    RefundService service =
+        new RefundService(new RealPgClient(), new RefundRepository());
+    service.refund(1L);
+  }
+}`,
+        good: `class RefundServiceTest {
+  @Test
+  void refund() {
+    FakePgClient pgClient = new FakePgClient();
+    RefundService service =
+        new RefundService(pgClient, new FakeRefundRepository());
+    service.refund(1L);
+    assertThat(pgClient.requested()).isTrue();
+  }
+}`,
+        problem: "테스트가 실제 외부 PG나 실제 저장소에 의존하면 느리고 불안정하며 실패 원인을 분리하기 어렵다.",
+        interview: "외부 의존성은 DI로 주입하고 테스트에서는 fake나 mock으로 대체해 유스케이스 동작만 검증해야 합니다."
+      },
+      {
+        name: "Util이 Validator, Policy, Notifier를 모두 담당",
+        category: "Util",
+        keywords: ["Util 책임 과다", "Policy 분리", "SRP 위반"],
+        bad: `class OrderUtil {
+  static boolean valid(Order order) { return order.amount > 0; }
+  static int fee(Order order) { return order.amount > 30000 ? 0 : 3000; }
+  static void notify(Long userId) { System.out.println(userId); }
+}`,
+        good: `class OrderValidator {
+  void validate(Order order) {}
+}
+class DeliveryFeePolicy {
+  int calculate(Order order) { return 0; }
+}
+class OrderNotifier {
+  void notify(Long userId) {}
+}`,
+        problem: "Util이라는 이름 아래 검증, 정책 계산, 알림 부작용이 섞여 있다. 변경 이유가 달라 테스트와 유지보수가 어려워진다.",
+        interview: "순수 유틸이 아니라 정책이나 알림 책임이면 Validator, Policy, Notifier 같은 컴포넌트로 분리해야 합니다."
+      },
+      {
+        name: "Util에서 현재 시간과 랜덤값 직접 사용",
+        category: "Util",
+        keywords: ["테스트 가능성", "Clock", "Random", "static Util"],
+        bad: `class CouponUtil {
+  static boolean expired(Coupon coupon) {
+    return LocalDateTime.now().isAfter(coupon.expiredAt);
+  }
+
+  static String issueCode() {
+    return "CP-" + new Random().nextInt(1000);
+  }
+}`,
+        good: `class CouponPolicy {
+  private final Clock clock;
+  private final CodeGenerator codeGenerator;
+
+  boolean expired(Coupon coupon) {
+    return LocalDateTime.now(clock).isAfter(coupon.expiredAt());
+  }
+}`,
+        problem: "시간과 랜덤값을 직접 호출하면 테스트가 실행 시점에 따라 흔들리고 재현이 어렵다.",
+        interview: "시간, 랜덤, 외부 호출처럼 변하는 값은 의존성으로 주입해 테스트에서 고정할 수 있게 해야 합니다."
+      },
+      {
+        name: "공통 Util에 여러 도메인 정책이 섞임",
+        category: "Util",
+        keywords: ["공통 Util 남용", "도메인 정책 혼재", "변경 영향"],
+        bad: `class CommonUtil {
+  static boolean canRefund(Payment p) { return p.amount > 0; }
+  static boolean canCancel(Order o) { return "READY".equals(o.status); }
+  static boolean canUseCoupon(Coupon c) { return !c.used; }
+}`,
+        good: `class RefundPolicy { boolean canRefund(Payment p) { return p.isPaid(); } }
+class OrderCancelPolicy { boolean canCancel(Order o) { return o.isReady(); } }
+class CouponUsePolicy { boolean canUse(Coupon c) { return c.isUsable(); } }`,
+        problem: "공통 Util에 여러 도메인의 정책이 모이면 한 도메인 변경이 다른 도메인 코드에 영향을 주기 쉽다.",
+        interview: "공통이라는 이름으로 도메인 정책을 섞기보다 각 도메인의 Policy로 분리하는 편이 안전합니다."
+      },
+      {
+        name: "self-invocation으로 @Transactional 미적용",
+        category: "AOP",
+        keywords: ["self-invocation", "@Transactional", "Spring AOP"],
+        bad: `@Service
+class OrderService {
+  public void cancel(Long id) {
+    validate(id);
+    cancelInternal(id);
+  }
+
+  @Transactional
+  public void cancelInternal(Long id) {
+    orderRepository.saveCanceled(id);
+  }
+}`,
+        good: `@Service
+class OrderService {
+  @Transactional
+  public void cancel(Long id) {
+    validate(id);
+    orderRepository.saveCanceled(id);
+  }
+}`,
+        problem: "같은 클래스 내부 호출은 Spring 프록시를 거치지 않기 때문에 내부 메서드의 AOP 어노테이션이 기대대로 적용되지 않을 수 있다.",
+        interview: "Spring AOP는 프록시 기반이므로 트랜잭션은 외부에서 호출되는 public Service 유스케이스 경계에 두는 것이 안전합니다."
+      },
+      {
+        name: "@Async를 내부 호출에 기대함",
+        category: "AOP",
+        keywords: ["@Async", "self-invocation", "비동기 오해"],
+        bad: `@Service
+class MailService {
+  public void join(User user) {
+    save(user);
+    sendWelcomeMail(user.email());
+  }
+
+  @Async
+  public void sendWelcomeMail(String email) {
+    mailClient.send(email);
+  }
+}`,
+        good: `@Service
+class JoinService {
+  private final WelcomeMailSender sender;
+
+  public void join(User user) {
+    save(user);
+    sender.sendWelcomeMail(user.email());
+  }
+}`,
+        problem: "같은 클래스 내부에서 @Async 메서드를 호출하면 프록시를 거치지 않아 비동기로 동작하지 않을 수 있다.",
+        interview: "@Async, Cache, Transaction 같은 AOP 기반 기능은 내부 호출이 아니라 프록시를 거치는 구조인지 확인해야 합니다."
+      },
+      {
+        name: "Filter / Interceptor / AOP 책임 경계 혼동",
+        category: "AOP",
+        keywords: ["Filter", "Interceptor", "AOP", "공통 처리"],
+        bad: `public void doFilter(req, res, chain) {
+  Long orderId = Long.valueOf(req.getParameter("orderId"));
+  if (!orderRepository.isOwner(orderId, currentUserId())) {
+    throw new RuntimeException("denied");
+  }
+  chain.doFilter(req, res);
+}`,
+        good: `authFilter.parseToken(req);
+loggingInterceptor.addTraceId(req);
+order.validateOwner(currentUserId);
+order.cancel();`,
+        problem: "웹 공통 계층에서 도메인 소유자 검증까지 처리하면 계층 책임이 섞이고 테스트/재사용이 어려워진다.",
+        interview: "Filter는 서블릿 전역, Interceptor는 MVC 요청 전후, AOP는 관심사 분리, 도메인 권한 검증은 Service/Domain 경계에서 보는 식으로 책임을 구분해야 합니다."
+      },
+      {
+        name: "ISP 위반: 너무 큰 인터페이스",
+        category: "SOLID",
+        keywords: ["ISP 위반", "Interface Segregation", "불필요한 의존"],
+        bad: `interface UserPort {
+  User find(Long id);
+  void save(User user);
+  void sendMail(User user);
+  void exportCsv();
+}
+
+class LoginService {
+  private final UserPort userPort;
+}`,
+        good: `interface UserReader { User find(Long id); }
+interface UserWriter { void save(User user); }
+interface UserMailer { void sendMail(User user); }
+
+class LoginService {
+  private final UserReader userReader;
+}`,
+        problem: "클라이언트가 쓰지 않는 메서드까지 의존하게 되면 구현체와 테스트 대역이 불필요하게 커진다.",
+        interview: "인터페이스는 사용하는 클라이언트 기준으로 작게 나눠 불필요한 의존을 줄여야 합니다."
+      },
+      {
+        name: "LSP 위반: 하위 타입이 부모 계약을 깨뜨림",
+        category: "SOLID",
+        keywords: ["LSP 위반", "상속 오용", "계약 위반"],
+        bad: `class Coupon {
+  int discount(int amount) { return amount / 10; }
+}
+
+class DisabledCoupon extends Coupon {
+  int discount(int amount) {
+    throw new UnsupportedOperationException();
+  }
+}`,
+        good: `interface DiscountPolicy {
+  boolean supports(Coupon coupon);
+  int discount(Coupon coupon, int amount);
+}
+
+class DisabledCouponPolicy implements DiscountPolicy {
+  public int discount(Coupon coupon, int amount) { return 0; }
+}`,
+        problem: "부모 타입으로 사용할 수 있어야 하는데 특정 하위 타입이 예외를 던져 계약을 깨뜨린다.",
+        interview: "상속을 쓸 때는 하위 타입이 부모 타입의 기대 동작을 깨지 않는지 봐야 하고, 정책 분리가 더 나은 경우가 많습니다."
+      },
+      {
+        name: "인덱스를 타기 어려운 조건 조회",
+        category: "RDBMS",
+        keywords: ["인덱스", "실행계획", "LIKE", "조건 조회"],
+        bad: `List<Order> search(String keyword) {
+  return jdbc.query("""
+      select * from orders
+      where lower(customer_name) like '%' || ? || '%'
+      order by created_at desc
+      """, keyword);
+}`,
+        good: `select * from orders
+where user_id = ?
+  and status = ?
+  and created_at between ? and ?
+order by created_at desc
+limit ? offset ?`,
+        problem: "함수 적용과 앞쪽 와일드카드 검색은 일반 인덱스를 활용하기 어렵다. 데이터가 많아지면 실행계획과 응답 시간이 나빠질 수 있다.",
+        interview: "목록/검색 API는 조건, 정렬, 페이징, 인덱스 사용 가능성을 함께 보고 실행계획을 확인해야 합니다."
+      },
+      {
+        name: "페이징 없이 전체 목록 반환",
+        category: "RDBMS",
+        keywords: ["페이징", "정렬", "실행계획", "목록 API"],
+        bad: `@GetMapping("/orders")
+public List<OrderResponse> findAll() {
+  return orderRepository.findAll().stream()
+      .map(OrderResponse::from)
+      .toList();
+}`,
+        good: `@GetMapping("/orders")
+public Page<OrderResponse> findOrders(OrderSearchCondition condition,
+                                      Pageable pageable) {
+  return orderRepository.search(condition, pageable)
+      .map(OrderResponse::from);
+}`,
+        problem: "전체 목록을 한 번에 반환하면 데이터 증가 시 메모리와 응답 시간이 커지고 정렬 기준도 불명확해진다.",
+        interview: "목록 API는 조건 조회, 정렬, 페이징을 기본으로 보고 필요한 인덱스와 실행계획을 함께 확인해야 합니다."
+      },
+      {
+        name: "JPA N+1 조회",
+        category: "JPA / QueryDSL",
+        keywords: ["JPA", "N+1", "fetch join"],
+        bad: `List<Order> orders = orderRepository.findAll();
+for (Order order : orders) {
+  System.out.println(order.getUser().getName());
+}`,
+        good: `select o from Order o
+join fetch o.user
+where o.status = :status`,
+        problem: "주문 목록 조회 후 각 주문의 연관 User를 지연 로딩하면 주문 수만큼 추가 쿼리가 발생할 수 있다.",
+        interview: "JPA 목록 조회에서는 연관 엔티티 접근으로 N+1이 생기는지 보고, fetch join이나 batch size 등 조회 전략을 검토해야 합니다."
+      },
+      {
+        name: "JPA Entity를 API 응답으로 직접 반환",
+        category: "JPA / QueryDSL",
+        keywords: ["JPA Entity", "Lazy Loading", "DTO Projection"],
+        bad: `@GetMapping("/orders/{id}")
+public Order find(Long id) {
+  return orderRepository.findById(id).orElseThrow();
+}`,
+        good: `@GetMapping("/orders/{id}")
+public OrderResponse find(Long id) {
+  Order order = orderRepository.findById(id).orElseThrow();
+  return OrderResponse.from(order);
+}`,
+        problem: "JPA Entity를 그대로 반환하면 지연 로딩, 순환 참조, 내부 필드 노출, API 계약 결합 문제가 생길 수 있다.",
+        interview: "JPA Entity는 영속 모델이고 API 응답은 외부 계약이므로 Response DTO나 projection으로 분리하는 편이 안전합니다."
+      },
+      {
+        name: "QueryDSL 동적 조건에서 null 처리 혼동",
+        category: "JPA / QueryDSL",
+        keywords: ["QueryDSL", "동적 쿼리", "조건 조립"],
+        bad: `BooleanExpression condition =
+    order.userId.eq(userId)
+        .and(order.status.eq(status))
+        .and(order.keyword.contains(keyword));`,
+        good: `BooleanExpression statusEq(OrderStatus status) {
+  return status == null ? null : order.status.eq(status);
+}
+
+BooleanExpression keywordContains(String keyword) {
+  return hasText(keyword) ? order.memo.contains(keyword) : null;
+}
+
+query.select(order)
+    .from(order)
+    .where(statusEq(status), keywordContains(keyword))
+    .fetch();`,
+        problem: "검색 조건이 null일 수 있는데 그대로 eq/contains를 호출하면 NPE가 나거나 의도하지 않은 조건이 붙을 수 있다.",
+        interview: "QueryDSL 동적 쿼리는 null 조건을 where(cond1, cond2)처럼 안전하게 무시되는 맥락에서 사용해야 합니다."
+      },
+      {
+        name: "Liquibase 변경 이력 없이 스키마 수동 변경",
+        category: "JPA / QueryDSL",
+        keywords: ["Liquibase", "Schema Migration", "운영 배포"],
+        bad: `alter table orders add column cancel_reason varchar(255);`,
+        good: `<changeSet id="add-cancel-reason" author="sujin">
+  <addColumn tableName="orders">
+    <column name="cancel_reason" type="varchar(255)"/>
+  </addColumn>
+  <rollback>
+    <dropColumn tableName="orders" columnName="cancel_reason"/>
+  </rollback>
+</changeSet>`,
+        problem: "스키마 변경을 수동으로 하면 환경별 DB 상태가 달라지고 배포/롤백 이력이 남지 않는다.",
+        interview: "운영 스키마 변경은 Liquibase 같은 마이그레이션 도구로 변경 이력, 순서, 롤백 전략을 관리해야 합니다."
+      },
+      {
+        name: "POST 생성인데 201 기준이 없음",
+        category: "Controller",
+        keywords: ["201 Created", "Location Header", "API 계약"],
+        bad: `@PostMapping("/orders")
+public OrderResponse create(@Valid @RequestBody OrderRequest request) {
+  return orderService.create(request);
+}`,
+        good: `@PostMapping("/orders")
+public ResponseEntity<OrderResponse> create(@Valid @RequestBody OrderRequest request) {
+  OrderResponse response = orderService.create(request);
+  URI location = URI.create("/orders/" + response.id());
+  return ResponseEntity.created(location).body(response);
+}`,
+        problem: "생성 API인데 200처럼 보이면 클라이언트가 생성 성공, 리소스 위치, 후속 조회 기준을 명확히 알기 어렵다.",
+        interview: "생성 API는 보통 201 Created와 Location 또는 생성된 Response DTO를 통해 API 계약을 명확히 하는 편이 좋습니다."
+      },
+      {
+        name: "DELETE 성공 응답 기준 혼동",
+        category: "Controller",
+        keywords: ["DELETE", "204 No Content", "응답 바디"],
+        bad: `@DeleteMapping("/orders/{id}")
+public Map<String, Object> delete(@PathVariable Long id) {
+  orderService.delete(id);
+  return Map.of("success", true);
+}`,
+        good: `@DeleteMapping("/orders/{id}")
+public ResponseEntity<Void> delete(@PathVariable Long id) {
+  orderService.delete(id);
+  return ResponseEntity.noContent().build();
+}`,
+        problem: "삭제 성공 후 별도 바디가 필요 없는데 임의 Map을 반환하면 성공 계약이 불필요하게 흔들린다.",
+        interview: "삭제처럼 반환할 본문이 없으면 204 No Content를 고려하고, 삭제 결과 정보가 필요하면 명시적인 Response DTO를 사용합니다."
+      },
+      {
+        name: "Controller가 Request DTO를 수정",
+        category: "Controller",
+        keywords: ["Request mutation", "서버 결정값", "계층 책임"],
+        bad: `@PostMapping("/members")
+public MemberResponse join(@Valid @RequestBody MemberJoinRequest request) {
+  request.role = "USER";
+  request.status = "ACTIVE";
+  return memberService.join(request);
+}`,
+        good: `@PostMapping("/members")
+public MemberResponse join(@Valid @RequestBody MemberJoinRequest request) {
+  return memberService.join(request);
+}
+
+class MemberService {
+  MemberResponse join(MemberJoinRequest request) {
+    Member member = Member.createUser(request.email(), request.name());
+    return MemberResponse.from(memberRepository.save(member));
+  }
+}`,
+        problem: "Controller가 서버 결정값을 요청 객체에 채우면 요청 계약과 도메인 생성 책임이 섞인다.",
+        interview: "Request DTO는 외부 입력을 담고, role/status 같은 서버 결정값은 Service나 Domain factory에서 정해야 합니다."
+      },
+      {
+        name: "ControllerAdvice가 Exception.class를 먼저 잡음",
+        category: "Exception",
+        keywords: ["ControllerAdvice", "Exception.class", "예외 매핑 순서"],
+        bad: `@RestControllerAdvice
+class ApiExceptionHandler {
+  @ExceptionHandler(Exception.class)
+  ResponseEntity<ErrorResponse> handle(Exception e) {
+    return ResponseEntity.status(500).body(ErrorResponse.internal());
+  }
+
+  @ExceptionHandler(OrderNotFoundException.class)
+  ResponseEntity<ErrorResponse> notFound(OrderNotFoundException e) {
+    return ResponseEntity.status(404).body(ErrorResponse.notFound());
+  }
+}`,
+        good: `@RestControllerAdvice
+class ApiExceptionHandler {
+  @ExceptionHandler(OrderNotFoundException.class)
+  ResponseEntity<ErrorResponse> notFound(OrderNotFoundException e) {
+    return ResponseEntity.status(404).body(ErrorResponse.notFound());
+  }
+
+  @ExceptionHandler(Exception.class)
+  ResponseEntity<ErrorResponse> handle(Exception e) {
+    return ResponseEntity.status(500).body(ErrorResponse.internal());
+  }
+}`,
+        problem: "넓은 예외 처리가 세부 도메인 예외를 가리면 404/409 같은 클라이언트 대응 가능한 실패가 500으로 뭉개질 수 있다.",
+        interview: "공통 예외 처리는 구체 예외를 명확히 매핑하고, 마지막에 예상 못한 Exception을 처리하는 구조가 안전합니다."
+      },
+      {
+        name: "catch 후 로그 없이 빈 응답 반환",
+        category: "Exception",
+        keywords: ["예외 삼킴", "로그 누락", "운영 장애"],
+        bad: `public OrderResponse find(Long id) {
+  try {
+    return OrderResponse.from(orderRepository.findById(id).orElseThrow());
+  } catch (Exception e) {
+    return OrderResponse.empty();
+  }
+}`,
+        good: `public OrderResponse find(Long id) {
+  Order order = orderRepository.findById(id)
+      .orElseThrow(() -> new OrderNotFoundException(id));
+  return OrderResponse.from(order);
+}`,
+        problem: "예외를 삼키고 빈 응답으로 바꾸면 장애 원인이 사라지고 클라이언트도 실제 실패를 알 수 없다.",
+        interview: "조회 실패와 시스템 오류는 의미가 다르므로 예외를 숨기지 말고 도메인 예외와 로그, 공통 응답으로 드러내야 합니다."
+      },
+      {
+        name: "예외 메시지에 민감정보 노출",
+        category: "Exception",
+        keywords: ["개인정보", "민감정보", "ErrorResponse"],
+        bad: `throw new LoginException(
+    "login failed email=" + email + ", password=" + password
+);`,
+        good: `throw new LoginException(LoginErrorCode.INVALID_CREDENTIALS);
+
+log.warn("login failed emailHash={}", hash(email));`,
+        problem: "예외 메시지나 로그에 비밀번호, 토큰, 개인정보가 들어가면 응답과 로그 시스템을 통해 유출될 수 있다.",
+        interview: "에러 응답은 안전한 코드와 메시지만 제공하고, 로그도 마스킹이나 해시 처리로 추적성과 보안을 함께 봐야 합니다."
+      },
+      {
+        name: "Entity가 외부 API 호출까지 담당",
+        category: "DTO / Entity",
+        keywords: ["Entity 과책임", "외부 의존성", "도메인 책임"],
+        bad: `class Order {
+  void cancel(PgClient pgClient) {
+    this.status = "CANCELLED";
+    pgClient.refund(this.paymentKey);
+  }
+}`,
+        good: `class Order {
+  void cancel() {
+    this.status = "CANCELLED";
+  }
+}
+
+class OrderCancelService {
+  void cancel(Long orderId) {
+    Order order = orderRepository.findById(orderId).orElseThrow();
+    order.cancel();
+    orderRepository.save(order);
+    refundRequester.request(order.paymentKey());
+  }
+}`,
+        problem: "Entity가 외부 API 클라이언트까지 알면 도메인 상태와 인프라 부작용이 강하게 결합된다.",
+        interview: "Entity는 상태와 규칙을 표현하고, 외부 API 호출은 Service나 별도 Component에서 트랜잭션/실패 처리와 함께 다루는 편이 좋습니다."
+      },
+      {
+        name: "Entity가 Response DTO를 조립",
+        category: "DTO / Entity",
+        keywords: ["Entity 과책임", "Response DTO", "API 계약"],
+        bad: `class Order {
+  OrderResponse toResponse() {
+    return new OrderResponse(id, status, user.email(), payment.cardNo());
+  }
+}`,
+        good: `class OrderResponse {
+  static OrderResponse from(Order order) {
+    return new OrderResponse(order.id(), order.status());
+  }
+}`,
+        problem: "Entity가 API 응답 구조와 연관 객체 노출 정책까지 알면 내부 도메인 모델이 외부 계약에 묶인다.",
+        interview: "응답 조립은 Response DTO나 Mapper에서 처리하고, Entity는 도메인 상태와 행위에 집중하는 편이 변경에 안전합니다."
+      },
+      {
+        name: "테스트가 mock 호출 여부만 검증",
+        category: "Test",
+        keywords: ["Mock 검증", "상태 검증", "테스트 품질"],
+        bad: `@Test
+void cancel() {
+  service.cancel(1L);
+  verify(orderRepository).save(any());
+}`,
+        good: `@Test
+void cancel_changes_order_status() {
+  Order order = orderRepository.save(activeOrder());
+  service.cancel(order.id());
+  Order saved = orderRepository.findById(order.id()).orElseThrow();
+  assertThat(saved.status()).isEqualTo(OrderStatus.CANCELLED);
+}`,
+        problem: "save 호출 여부만 보면 실제 상태가 올바르게 바뀌었는지, 예외 조건이 지켜졌는지 알 수 없다.",
+        interview: "테스트는 협력자 호출만이 아니라 유스케이스 결과 상태와 실패 흐름을 함께 고정해야 합니다."
+      },
+      {
+        name: "테스트 간 static 데이터 순서 의존",
+        category: "Test",
+        keywords: ["테스트 격리", "static store", "순서 의존"],
+        bad: `class OrderRepositoryTest {
+  static List<Order> orders = new ArrayList<>();
+
+  @Test
+  void first() {
+    orders.add(new Order(1L));
+  }
+
+  @Test
+  void second() {
+    assertThat(orders).hasSize(1);
+  }
+}`,
+        good: `class OrderRepositoryTest {
+  List<Order> orders;
+
+  @BeforeEach
+  void setUp() {
+    orders = new ArrayList<>();
+  }
+}`,
+        problem: "테스트가 실행 순서나 이전 테스트의 데이터에 의존하면 단독 실행, 병렬 실행, CI 환경에서 쉽게 깨진다.",
+        interview: "테스트 데이터는 각 테스트마다 새로 준비하고, static 저장소나 공유 mutable 상태는 격리해야 합니다."
+      },
+      {
+        name: "@SpringBootTest 남발",
+        category: "Test",
+        keywords: ["SpringBootTest", "단위 테스트", "테스트 비용"],
+        bad: `@SpringBootTest
+class RefundPolicyTest {
+  @Autowired RefundPolicy refundPolicy;
+
+  @Test
+  void calculate() {
+    assertThat(refundPolicy.calculate(1000)).isEqualTo(900);
+  }
+}`,
+        good: `class RefundPolicyTest {
+  RefundPolicy refundPolicy = new RefundPolicy();
+
+  @Test
+  void calculate() {
+    assertThat(refundPolicy.calculate(1000)).isEqualTo(900);
+  }
+}`,
+        problem: "순수 정책 테스트에 전체 Spring Context를 띄우면 느리고 실패 원인이 넓어진다.",
+        interview: "순수 계산/정책은 단위 테스트로 빠르게 검증하고, Spring 통합이 필요한 부분만 슬라이스나 통합 테스트로 분리하는 편이 좋습니다."
+      },
+      {
+        name: "API 응답 필드 하위 호환성 깨짐",
+        category: "Legacy Code",
+        keywords: ["API 계약", "하위 호환성", "협업"],
+        bad: `record OrderResponse(Long id, String state) {}
+
+class OrderController {
+  OrderResponse find(Long id) {
+    return new OrderResponse(id, "CANCELLED");
+  }
+}`,
+        good: `record OrderResponse(Long id, String status, String displayStatus) {}
+
+class OrderController {
+  OrderResponse find(Long id) {
+    return new OrderResponse(id, "CANCELLED", "취소 완료");
+  }
+}`,
+        problem: "기존 status 필드를 state로 바꾸거나 삭제하면 FE/QA/외부 연동이 동시에 깨질 수 있다.",
+        interview: "API 응답 필드는 외부 계약이므로 rename/delete는 하위 호환성과 단계적 전환 전략을 함께 봐야 합니다."
+      },
+      {
+        name: "로그에 추적 키가 없음",
+        category: "Legacy Code",
+        keywords: ["Logging", "traceId", "운영 추적"],
+        bad: `log.error("cancel failed");`,
+        good: `log.error("cancel failed traceId={} orderId={} userId={}",
+    traceId, orderId, userId);`,
+        problem: "운영 장애가 났을 때 어떤 요청, 사용자, 주문에서 실패했는지 추적하기 어렵다.",
+        interview: "로그는 개인정보를 피하면서 traceId, orderId, userId 같은 안전한 추적 키를 남겨 원인 분석 가능성을 높여야 합니다."
+      },
+      {
+        name: "OSIV (Open Session in View) 무분별 활성화",
+        category: "JPA / QueryDSL",
+        keywords: ["OSIV", "open-in-view", "커넥션 고갈", "성능 장애"],
+        bad: `# spring.properties 또는 application.yml
+spring.jpa.open-in-view=true # 기본값으로 활성화됨
+# 지연 로딩이 API 응답이 클라이언트에 나갈 때(View 렌더링)까지 유지됨
+# 결과적으로 Controller/View 영역까지 DB 커넥션을 붙잡고 있음`,
+        good: `# spring.properties 또는 application.yml
+spring.jpa.open-in-view=false # 비활성화
+# 지연 로딩은 Service 트랜잭션 경계(@Transactional) 안에서만 처리하도록 제한
+# 필요한 연관 객체는 트랜잭션 내에서 fetch join이나 DTO projection으로 미리 조회`,
+        problem: "OSIV가 활성화되어 있으면 트랜잭션이 끝나도 영속성 컨텍스트와 DB 커넥션이 뷰 렌더링 완료 시점까지 유지됩니다. 외부 API 호출 지연이나 트래픽 급증 시 DB 커넥션 풀(HikariCP)이 빠르게 고갈되어 전체 시스템 장애로 이어집니다.",
+        interview: "OSIV를 비활성화(\`spring.jpa.open-in-view=false\`)하여 DB 커넥션 점유 시간을 최소화해야 합니다. 지연 로딩이 필요한 연관 객체는 Service 트랜잭션 범위 내에서 fetch join, EntityGraph, 또는 DTO Projection을 통해 조회하여 반환하도록 설계합니다."
+      },
+      {
+        name: "트랜잭션 내에서 느린 외부 API 호출",
+        category: "Service",
+        keywords: ["@Transactional", "외부 API", "커넥션 점유", "HikariCP"],
+        bad: `@Service
+class OrderService {
+  @Transactional
+  public void order(OrderRequest request) {
+    Order order = Order.create(request);
+    orderRepository.save(order);
+    
+    // 외부 PG사 결제 API 호출 (평균 1~3초 소요)
+    pgClient.requestPayment(order.id(), request.paymentInfo());
+    
+    order.complete();
+  }
+}`,
+        good: `@Service
+class OrderService {
+  private final OrderCreator orderCreator;
+  private final PgClient pgClient;
+  private final OrderCompleter orderCompleter;
+
+  // 1. 트랜잭션 외부에서 제어 흐름 조율
+  public void order(OrderRequest request) {
+    // 2. 주문 대기 상태 저장 (별도 트랜잭션)
+    OrderId orderId = orderCreator.createPending(request);
+    
+    // 3. 외부 API 호출 (트랜잭션 바깥에서 실행하여 커넥션 점유 방지)
+    pgClient.requestPayment(orderId, request.paymentInfo());
+    
+    // 4. 결제 결과 반영 (별도 트랜잭션)
+    orderCompleter.complete(orderId);
+  }
+}`,
+        problem: "@Transactional 범위 내에 네트워크 I/O(외부 API 호출)가 포함되면, 외부 서버의 응답을 대기하는 동안 DB 커넥션을 반환하지 못하고 붙잡고 있게 됩니다. 이는 커넥션 풀 고갈과 성능 저하의 주원인입니다.",
+        interview: "외부 API 호출과 같이 대기 시간이 긴 네트워크 I/O는 DB 트랜잭션 경계 바깥으로 분리해야 합니다. 요청을 PENDING 상태로 먼저 DB에 커밋하여 저장한 뒤 외부 API를 호출하고, 그 결과에 따라 별도의 트랜잭션으로 상태를 업데이트하는 구조가 안전합니다."
+      },
+      {
+        name: "Servlet Filter에서 Request Body 읽은 후 스트림 닫힘",
+        category: "AOP",
+        keywords: ["Filter", "getInputStream", "IOException", "RequestBody"],
+        bad: `class LoggingFilter implements Filter {
+  public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) {
+    // 요청 바디(JSON) 로깅을 위해 스트림을 직접 읽음
+    String body = StreamUtils.copyToString(request.getInputStream(), StandardCharsets.UTF_8);
+    log.info("Request Body: {}", body);
+    
+    // 이후 Controller에서 @RequestBody 바인딩 시 "Stream closed" IOException 발생!
+    chain.doFilter(request, response);
+  }
+}`,
+        good: `class LoggingFilter implements Filter {
+  public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) {
+    // ContentCachingRequestWrapper로 요청 객체를 래핑하여 전달
+    ContentCachingRequestWrapper wrappedRequest = new ContentCachingRequestWrapper((HttpServletRequest) request);
+    
+    // 필터 체인을 먼저 수행하여 Controller 단에서 정상적으로 바디를 읽게 함
+    chain.doFilter(wrappedRequest, response);
+    
+    // 바인딩 이후 캐싱된 바디 바이트를 읽어 로깅
+    String body = new String(wrappedRequest.getContentAsByteArray(), StandardCharsets.UTF_8);
+    log.info("Request Body: {}", body);
+  }
+}`,
+        problem: "HttpServletRequest의 InputStream은 데이터를 한 번만 읽을 수 있는 일회성 스트림입니다. Filter나 Interceptor에서 로깅 등을 목적으로 스트림을 읽어버리면, 정작 Controller의 Jackson 라이브러리가 바디를 읽지 못해 예외가 발생합니다.",
+        interview: "HttpServletRequest의 요청 바디는 한 번만 읽을 수 있으므로, Filter 계층에서 이를 읽기 위해서는 \`ContentCachingRequestWrapper\`로 감싸서 전달해 주어야 합니다. 이렇게 하면 필터 통과 후 캐싱된 바이트 배열을 통해 요청 바디 내용을 안전하게 여러 번 로깅할 수 있습니다."
+      },
+      {
+        name: "JPA IDENTITY 전략에서 Batch Insert 미동작",
+        category: "JPA / QueryDSL",
+        keywords: ["IDENTITY", "batch insert", "쓰기 지연", "bulk insert"],
+        bad: `@Entity
+public class Order {
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id; // DB auto-increment에 의존
+}
+
+// 1만 건 저장 시 루프를 돌며 건건이 INSERT 쿼리 실행 (배치 쓰기 지연 작동 안 함)
+for (Order order : orders) {
+  orderRepository.save(order);
+}`,
+        good: `@Entity
+public class Order {
+  @Id
+  @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "order_seq")
+  private Long id; // Sequence 전략으로 변경
+}
+
+// 또는 벌크 대량 삽입일 경우 JdbcTemplate batchUpdate 활용
+jdbcTemplate.batchUpdate("insert into orders (status) values (?)", orders, ...);`,
+        problem: "JPA의 IDENTITY 생성 전략은 데이터베이스가 ID 값을 지정해주므로, 영속성 컨텍스트에 엔티티를 저장하는 시점에 즉시 DB로 INSERT 쿼리가 전송되어야 합니다. 이로 인해 Hibernate의 쓰기 지연을 활용한 Batch Insert(배치 전송)가 동작하지 않아 삽입 성능이 심각하게 저하됩니다.",
+        interview: "JPA의 IDENTITY 전략은 객체를 영속화하는 즉시 DB에 INSERT를 날려 식별자를 받아와야 하므로 쓰기 지연을 통한 배치 처리가 불가능합니다. 대용량 벌크 삽입이 빈번하게 일어나는 엔티티의 경우 Sequence 전략을 선택하거나, \`JdbcTemplate\`의 \`batchUpdate\`를 활용하여 벌크 연산을 직접 수행하는 편이 좋습니다."
+      },
+      {
+        name: "단방향 @OneToMany 매핑으로 연결 테이블 자동 생성",
+        category: "JPA / QueryDSL",
+        keywords: ["@OneToMany", "@JoinColumn", "연결 테이블", "UPDATE 쿼리"],
+        bad: `@Entity
+public class Order {
+  @OneToMany
+  private List<OrderItem> items = new ArrayList<>(); // @JoinColumn이 누락됨
+}`,
+        good: `@Entity
+public class Order {
+  @OneToMany
+  @JoinColumn(name = "order_id") // 외래키 대상 컬럼 명시
+  private List<OrderItem> items = new ArrayList<>();
+}`,
+        problem: "@JoinColumn 없이 단방향 @OneToMany 매핑만 선언하면, JPA는 두 테이블 간의 관계 설정을 위해 제3의 연결 조인 테이블(Link Table)을 자동으로 생성합니다. 이로 인해 관계 변경 시 조인 테이블 추가 쿼리가 실행되고 관리 비용이 증가합니다.",
+        interview: "단방향 \`@OneToMany\` 사용 시 \`@JoinColumn\`을 생략하면 불필요한 중간 연결 테이블(Link Table)이 생성되어 쿼리 수 증가 및 성능 저하를 초래합니다. 반드시 외래키 컬럼을 명시하는 \`@JoinColumn\`을 추가하거나, 가능하면 외래키의 주인인 N 측에서 \`@ManyToOne\`을 선언하는 양방향 매핑으로 설계하는 것이 권장됩니다."
+      },
+      {
+        name: "JPA Entity equals/hashCode의 Generated ID 의존",
+        category: "DTO / Entity",
+        keywords: ["equals", "hashCode", "영속성 컨텍스트", "Set 정합성"],
+        bad: `@Entity
+public class User {
+  @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    User user = (User) o;
+    return Objects.equals(id, user.id); // ID 컬럼만으로 비교
+  }
+  @Override
+  public int hashCode() {
+    return Objects.hash(id);
+  }
+}`,
+        good: `@Entity
+public class User {
+  @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (!(o instanceof User)) return false;
+    User user = (User) o;
+    return id != null && id.equals(user.id); // 영속화된 객체에 대해서만 ID로 동일성 비교
+  }
+  @Override
+  public int hashCode() {
+    return 31; // 모든 영속 객체가 동일한 해시 버킷을 사용하여 equals를 강제하도록 유도
+  }
+}`,
+        problem: "데이터베이스에 저장되기 전인 비영속(Transient) 엔티티는 ID가 null입니다. 이 객체들을 Set에 저장한 후 DB에 영속화(save)하면 ID가 할당되어 해시코드 값이 달라집니다. 결과적으로 Set에 저장된 객체를 찾거나 삭제할 수 없는 컬렉션 정합성 훼손 버그가 발생합니다.",
+        interview: "JPA 엔티티의 \`equals\`와 \`hashCode\`를 데이터베이스 자동 생성 ID에만 의존해 재정의하면, 영속화 전후로 객체의 해시코드 값이 바뀌어 \`HashSet\` 등에서 객체가 유실되는 버그가 발생합니다. 따라서 고유한 비즈니스 키를 기준으로 구현하거나, 안전하게 기본 식별자 기반 비교식으로 제한해야 합니다."
+      },
+      {
+        name: "스레드 풀 환경에서 ThreadLocal 정리 누락",
+        category: "Legacy Code",
+        keywords: ["ThreadLocal", "스레드 풀", "메모리 누수", "정보 유출"],
+        bad: `public class UserContextHolder {
+  private static final ThreadLocal<User> context = new ThreadLocal<>();
+  public static void set(User user) { context.set(user); }
+  public static User get() { return context.get(); }
+  // remove()가 빠짐
+}`,
+        good: `public class UserContextFilter implements Filter {
+  public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain) {
+    try {
+      UserContextHolder.set(extractUser(req));
+      chain.doFilter(req, res);
+    } finally {
+      // 요청이 종료되는 시점에 반드시 ThreadLocal 리소스 제거
+      UserContextHolder.remove();
+    }
+  }
+}`,
+        problem: "Tomcat 등의 웹 서버는 스레드를 매번 새로 생성하지 않고 스레드 풀을 통해 재사용합니다. 요청이 종료된 스레드가 ThreadLocal 정보를 정리하지 않고 풀에 반환되면, 다음 요청을 처리하는 엉뚱한 사용자가 이전 사용자의 인증 정보에 접근(정보 유출)하거나 메모리 누수를 겪을 수 있습니다.",
+        interview: "스레드 풀을 활용하는 멀티스레드 환경에서 ThreadLocal을 사용할 때는 사용 완료 시 반드시 \`try-finally\` 블록의 \`finally\`에서 \`ThreadLocal.remove()\`를 명시적으로 호출해 내부 캐시 정보를 청소해 주어야 정보 유출 및 메모리 릭을 방지할 수 있습니다."
+      },
+      {
+        name: "CompletableFuture의 공통 스레드 풀 오용",
+        category: "Legacy Code",
+        keywords: ["CompletableFuture", "ForkJoinPool", "ThreadPool", "비동기 병목"],
+        bad: `// 별도의 ThreadPoolExecutor 지정 없이 비동기 수행
+CompletableFuture.runAsync(() -> {
+  // 오랜 대기시간이 소요되는 외부 API 연동이나 DB I/O 수행
+  slowExternalApiCall();
+});`,
+        good: `@Configuration
+public class AsyncConfig {
+  @Bean
+  public Executor customAsyncExecutor() {
+    ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+    executor.setCorePoolSize(10);
+    executor.setMaxPoolSize(50);
+    executor.setQueueCapacity(100);
+    executor.initialize();
+    return executor;
+  }
+}
+
+// 비동기 실행 시 정의된 커스텀 Executor를 인자로 활용해 작업을 격리
+CompletableFuture.runAsync(() -> {
+  slowExternalApiCall();
+}, customAsyncExecutor);`,
+        problem: "CompletableFuture 실행 시 별도 Executor를 넘겨주지 않으면 공통 풀인 \`ForkJoinPool.commonPool()\`을 공유하여 작동합니다. 이 공통 풀에서 I/O 블로킹 등 대기 시간이 긴 비동기 작업을 무차별적으로 실행하게 되면, 스레드가 모두 차단되어 다른 모든 Spring 비동기 기능과 애플리케이션 공통 처리 성능이 정지됩니다.",
+        interview: "CompletableFuture의 기본 비동기 동작은 애플리케이션 전반에서 공유하는 \`ForkJoinPool\`을 사용합니다. 블로킹 I/O 작업이나 대기 시간이 존재하는 태스크들은 공통 풀을 쉽게 마비시키므로, 반드시 작업 성격에 맞게 튜닝된 전용 \`ThreadPoolTaskExecutor\` 인스턴스를 주입하여 실행 영역을 격리해야 합니다."
+      },
+      {
+        name: "Redis 캐시 TTL 미설정 및 Entity 직접 캐싱",
+        category: "Util",
+        keywords: ["Redis", "TTL", "직렬화", "OOM", "Cache"],
+        bad: `// 1. TTL(만료 시간) 없이 저장하여 메모리 무한 증식 (OOM 위험)
+// 2. JPA Entity 클래스를 그대로 직렬화하여 캐싱 (클래스 필드 변경 시 역직렬화 에러 발생)
+public void cacheUser(User user) {
+  redisTemplate.opsForValue().set("user:" + user.getId(), user);
+}`,
+        good: `// DTO로 변환하고 1시간의 TTL을 설정하여 저장
+public void cacheUser(User user) {
+  UserCacheDto dto = UserCacheDto.from(user);
+  redisTemplate.opsForValue().set(
+      "user:" + user.getId(), 
+      dto, 
+      Duration.ofHours(1)
+  );
+}`,
+        problem: "Redis 캐시 데이터에 만료 시간(TTL)이 없으면 메모리가 고갈되어 OOM 장애가 발생할 수 있습니다. 또한, JPA Entity를 그대로 캐싱하면 엔티티의 스키마나 필드가 변경되었을 때 기존 캐시 데이터 역직렬화 시 InvalidClassException이 발생하여 배포 장애로 이어집니다.",
+        interview: "Redis 캐시는 메모리 한계가 있으므로 반드시 적절한 TTL을 부여해 OOM을 예방해야 합니다. 또한, 캐시 데이터는 클래스 변경에 유연하도록 JPA Entity 대신 전용 DTO나 JSON 문자열 형태로 직렬화하여 저장해야 안전합니다."
+      },
+      {
+        name: "Read Replica 복제 지연(Replication Lag) 고려 없는 쓰기 직후 조회",
+        category: "JPA / QueryDSL",
+        keywords: ["Read Replica", "Replication Lag", "쓰기 읽기 분리", "데이터 정합성"],
+        bad: `@Transactional
+public void signUp(UserRequest request) {
+  userRepository.save(new User(request.name())); // Primary(Writer)에 저장
+  
+  // 저장 직후 바로 조회 (Replica Reader 커넥션 사용)
+  // DB 복제 지연(Replication Lag)으로 인해 방금 저장한 유저가 null로 조회될 수 있음!
+  User registered = userRepository.findByIdFromReplica(request.id())
+      .orElseThrow(() -> new UserNotFoundException()); 
+}`,
+        good: `@Transactional
+public void signUp(UserRequest request) {
+  User user = userRepository.save(new User(request.name()));
+  
+  // 등록 트랜잭션 내부에서 영속화된 객체를 그대로 활용하거나, 
+  // 반드시 실시간 정합성이 필요한 조회는 Primary(Writer) 커넥션으로 조회하도록 명시함
+  User registered = userRepository.findByIdFromPrimary(user.getId())
+      .orElseThrow(() -> new UserNotFoundException());
+}`,
+        problem: "Read Replica(읽기 전용 DB) 복제 지연으로 인해 Primary에 데이터를 쓴 직후 바로 Replica에서 조회하면 데이터가 없거나 이전 데이터가 반환되는 현상이 발생합니다. 특히 결제 완료 직후 주문 상세 조회 같은 실시간 정합성이 필요한 비즈니스에서 심각한 오류를 낳습니다.",
+        interview: "읽기/쓰기 분리 환경에서는 DB 간 동기화 지연(Replication Lag)을 염두에 두어야 합니다. 데이터를 수정한 직후의 조회 흐름이나 실시간 일관성이 보장되어야 하는 비즈니스 도메인은 Replica가 아닌 Primary DB를 바라보도록 강제하거나, 세션 레벨에서 일관성을 유지할 수 있도록 라우팅 전략을 수립해야 합니다."
+      },
+      {
+        name: "Health Check API에서 무거운 DB 쿼리 수행",
+        category: "Controller",
+        keywords: ["Health Check", "로드밸런서", "DB 부하", "장애 전파"],
+        bad: `@RestController
+class HealthCheckController {
+  @GetMapping("/health")
+  public ResponseEntity<String> health() {
+    // 로드밸런서가 5초마다 호출하는데, 그때마다 DB 커넥션을 잡고 select 1 쿼리를 수행함
+    jdbcTemplate.queryForObject("SELECT 1", Integer.class);
+    return ResponseEntity.ok("UP");
+  }
+}`,
+        good: `@RestController
+class HealthCheckController {
+  @GetMapping("/health")
+  public ResponseEntity<String> health() {
+    // 헬스체크는 로컬 애플리케이션 생존 여부(메모리 바인딩)만 신속히 반환하고,
+    // 디테일한 DB나 외부 커넥션 검사는 진단용 세부 엔드포인트(/health/detail)로 분리
+    return ResponseEntity.ok("UP");
+  }
+}`,
+        problem: "로드밸런서(Health Check)가 인스턴스의 생존 여부를 확인할 때마다 DB 쿼리를 수행하게 하면, DB 장애나 커넥션 병목 발생 시 Health Check API도 같이 타임아웃을 겪게 됩니다. 이로 인해 로드밸런서가 정상 가동 중인 서버마저 다운된 것으로 판단하여 전체 인스턴스를 풀에서 제외시키는 연쇄 장애가 발생합니다.",
+        interview: "로드밸런서의 주기적인 헬스체크 API는 가볍게 응용프로그램 자체의 포트가 살아있는지만 체크하도록 설계해야 합니다. DB나 외부 연동 검사를 포함시키면 DB 장애 시 모든 웹 서버가 오프라인으로 강제 배제되는 캐스케이딩(연쇄) 장애를 유발하므로, 단순 생존 확인용과 상세 진단용 엔드포인트를 나누어 관리해야 합니다."
+      },
+      {
+        name: "인덱스 없는 컬럼에 비관적 락(SELECT FOR UPDATE) 적용",
+        category: "RDBMS",
+        keywords: ["비관적 락", "SELECT FOR UPDATE", "인덱스 누락", "테이블 락"],
+        bad: `// status 컬럼에 인덱스가 없는 상태
+// 특정 상태의 주문만 잠그려 했으나 테이블 전체 행(Table Lock) 또는 갭이 전체 잠김
+@Lock(LockModeType.PESSIMISTIC_WRITE)
+@Query("select o from Order o where o.status = :status")
+List<Order> findByStatusWithLock(@Param("status") OrderStatus status);`,
+        good: `// status 컬럼에 INDEX(status)를 추가하여 조건 대상 인덱스 레코드만 잠그도록 제한
+// 또는 락 범위를 최소화하기 위해 식별자(PK)로 단건 조회 시에만 비관적 락 적용
+@Lock(LockModeType.PESSIMISTIC_WRITE)
+@Query("select o from Order o where o.id = :id")
+Optional<Order> findByIdWithLock(@Param("id") Long id);`,
+        problem: "RDBMS(특히 MySQL InnoDB)에서 비관적 락(SELECT FOR UPDATE)은 인덱스 레코드에 락을 겁니다. 인덱스가 없는 컬럼 조건으로 비관적 락을 수행하면 조건에 맞는 행만 잠기는 것이 아니라 테이블 전체 레코드 또는 넓은 범위에 락이 걸려(Table Scan Lock) 동시성이 급격히 저하되고 데드락이 발생합니다.",
+        interview: "비관적 락을 걸 때는 반드시 인덱스를 타는 조건절을 사용해야 합니다. 인덱스가 없으면 스캔 범위 전체에 락이 걸려 테이블 전체가 잠기는 장애가 발생할 수 있습니다. 가장 안전한 방법은 락 범위를 최소화하기 위해 고유 식별자(PK) 조회를 기반으로 락을 획득하는 것입니다."
+      },
+      {
+        name: "분산 서버 환경에서 Local HashMap을 이용한 Rate Limiting",
+        category: "AOP",
+        keywords: ["Rate Limiting", "분산 환경", "ConcurrentHashMap", "동기화 누락"],
+        bad: `@Component
+class LocalRateLimiter {
+  // 분산 웹 서버 환경인데 각 서버 프로세스 메모리에만 횟수를 누적함
+  private final Map<String, Integer> limitMap = new ConcurrentHashMap<>();
+
+  public boolean isAllowed(String clientIp) {
+    int count = limitMap.getOrDefault(clientIp, 0);
+    if (count >= 100) return false;
+    limitMap.put(clientIp, count + 1);
+    return true;
+  }
+}`,
+        good: `@Component
+class DistributedRateLimiter {
+  private final RedisTemplate<String, String> redisTemplate;
+
+  public boolean isAllowed(String clientIp) {
+    // Redis의 Increment 연산과 TTL을 활용하여 분산 환경 통합 처리량 제어
+    String key = "rate:" + clientIp;
+    Long count = redisTemplate.opsForValue().increment(key);
+    if (count != null && count == 1) {
+      redisTemplate.expire(key, Duration.ofMinutes(1));
+    }
+    return count != null && count <= 100;
+  }
+}`,
+        problem: "다중 인스턴스로 수평 확장된 분산 서버 환경에서 로컬 메모리 객체(ConcurrentHashMap 등)를 이용해 API 호출 제한을 처리하면, 로드밸런싱으로 요청이 여러 서버로 분산될 때 각 서버 메모리마다 카운트가 따로 쌓여 총 제한량이 설계 값보다 서버 대수 배수만큼 늘어납니다.",
+        interview: "다중 서버 환경에서 일관된 Rate Limiting(API 호출 제한)을 구현하기 위해서는 로컬 메모리가 아닌 Redis와 같은 공통 분산 데이터 저장소를 활용해야 합니다. Redis의 INCR 연산과 EXPIRE 설정을 결합하거나, API Gateway 계층에서 공통 처리하도록 설계해야 분산 서버 간 일관된 트래픽 제어가 보장됩니다."
+      },
+      {
+        name: "트랜잭션 커밋 전 비동기 메시지 큐 발행",
+        category: "Service",
+        keywords: ["Message Queue", "@Transactional", "정합성", "outbox pattern"],
+        bad: `@Transactional
+public void order(OrderRequest request) {
+  Order order = orderRepository.save(new Order(request));
+  
+  // DB 트랜잭션이 커밋 완료되기 전에 Kafka/RabbitMQ로 주문 완료 메시지 전송
+  // Worker가 메시지를 읽고 DB를 조회할 때 아직 커밋 전이라 주문 데이터를 못 찾는 현상 발생!
+  messageQueueProducer.send(new OrderEvent(order.getId()));
+}`,
+        good: `@Transactional
+public void order(OrderRequest request) {
+  Order order = orderRepository.save(new Order(request));
+  
+  // TransactionalEventListener를 통해 DB 커밋이 완료된 직후 이벤트를 발행
+  eventPublisher.publishEvent(new OrderEvent(order.getId()));
+}
+
+@Component
+class OrderEventHandler {
+  @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+  public void handleOrderCommit(OrderEvent event) {
+    messageQueueProducer.send(event); // 커밋 완료 후 발행 보장
+  }
+}`,
+        problem: "@Transactional 범위 안에서 비동기 메시지(Kafka, SQS, RabbitMQ 등)를 바로 발행하면, 메시지 전송은 성공했으나 예외 발생으로 DB 트랜잭션이 롤백되는 경우 데이터 불일치가 일어납니다. 또한 메시지 소비 속도가 빨라 DB 커밋이 끝나기 전에 Worker가 조회 쿼리를 실행해 EntityNotFound 에러가 나기도 합니다.",
+        interview: "비동기 메시지 큐에 이벤트를 발행할 때는 반드시 DB 트랜잭션이 완전히 커밋된 이후에 실행되도록 보장해야 합니다. Spring의 `@TransactionalEventListener`의 `AFTER_COMMIT` 옵션을 사용하여 트랜잭션 성공 완료 후에만 이벤트를 발행하도록 구성하거나, 트랜잭션 내부에서 이벤트를 로컬 테이블에 먼저 기록하고 별도 워커가 발행하는 Transactional Outbox Pattern을 활용해야 정합성이 깨지지 않습니다."
+      },
+      {
+        name: "equals만 재정의하고 hashCode 누락",
+        category: "Legacy Code",
+        keywords: ["equals", "hashCode", "HashMap", "HashSet", "동등성 계약"],
+        bad: `class CouponKey {
+  private final String code;
+  private final Long userId;
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (!(o instanceof CouponKey)) return false;
+    CouponKey key = (CouponKey) o;
+    return Objects.equals(code, key.code)
+        && Objects.equals(userId, key.userId);
+  }
+}
+
+Set<CouponKey> used = new HashSet<>();
+used.add(new CouponKey("WELCOME", 1L));
+used.contains(new CouponKey("WELCOME", 1L)); // false 가능`,
+        good: `class CouponKey {
+  private final String code;
+  private final Long userId;
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (!(o instanceof CouponKey)) return false;
+    CouponKey key = (CouponKey) o;
+    return Objects.equals(code, key.code)
+        && Objects.equals(userId, key.userId);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(code, userId);
+  }
+}`,
+        problem: "논리적으로 같은 객체라도 hashCode가 다르면 HashSet/HashMap이 다른 버킷을 조회한다. contains, get, 중복 제거가 기대와 다르게 동작할 수 있다.",
+        interview: "equals로 동등성 기준을 바꾸면 해시 기반 컬렉션 계약을 맞추기 위해 hashCode도 같은 기준으로 함께 재정의해야 합니다."
+      },
+      {
+        name: "반복문에서 String 덧셈으로 대량 문자열 생성",
+        category: "Legacy Code",
+        keywords: ["String 불변", "StringBuilder", "성능", "메모리"],
+        bad: `String csv = "";
+for (Order order : orders) {
+  csv += order.id() + "," + order.amount() + "\\n";
+}
+return csv;`,
+        good: `StringBuilder csv = new StringBuilder();
+for (Order order : orders) {
+  csv.append(order.id())
+      .append(",")
+      .append(order.amount())
+      .append("\\n");
+}
+return csv.toString();`,
+        problem: "String은 불변 객체라 반복 덧셈마다 새 문자열을 만든다. 데이터가 많아질수록 불필요한 객체 생성과 GC 부담이 커진다.",
+        interview: "루프 안에서 문자열을 계속 조립한다면 StringBuilder를 사용해 중간 객체 생성을 줄이는 편이 안전합니다. 멀티스레드 공유 버퍼가 필요할 때만 StringBuffer의 동기화 비용을 감수합니다."
+      },
+      {
+        name: "checked exception 발생 시 트랜잭션 롤백 오해",
+        category: "Exception",
+        keywords: ["Checked Exception", "@Transactional", "rollbackFor", "롤백 정책"],
+        bad: `@Transactional
+public void importOrders(Path file) throws IOException {
+  List<Order> orders = parse(file);
+  orderRepository.saveAll(orders);
+  uploadOriginalFile(file); // IOException 발생
+}`,
+        good: `@Transactional(rollbackFor = IOException.class)
+public void importOrders(Path file) throws IOException {
+  List<Order> orders = parse(file);
+  orderRepository.saveAll(orders);
+  uploadOriginalFile(file);
+}
+
+// 또는 복구 불가능한 도메인 실패로 감싸서 RuntimeException으로 전환
+throw new OrderImportFailedException(e);`,
+        problem: "Spring 트랜잭션은 기본적으로 RuntimeException과 Error에 롤백된다. checked exception이 그대로 전파되면 DB 저장이 커밋될 수 있어 파일 업로드 실패와 DB 상태가 어긋난다.",
+        interview: "checked exception을 쓰는 흐름에서는 복구 전략을 명확히 하고, 롤백이 필요하면 rollbackFor를 지정하거나 도메인 RuntimeException으로 변환해야 합니다."
+      },
+      {
+        name: "final 참조를 객체 불변으로 오해",
+        category: "DTO / Entity",
+        keywords: ["final", "불변성", "방어적 복사", "캡슐화"],
+        bad: `class Cart {
+  private final List<Item> items;
+
+  Cart(List<Item> items) {
+    this.items = items;
+  }
+
+  List<Item> items() {
+    return items; // 외부에서 add/remove 가능
+  }
+}`,
+        good: `class Cart {
+  private final List<Item> items;
+
+  Cart(List<Item> items) {
+    this.items = List.copyOf(items);
+  }
+
+  List<Item> items() {
+    return Collections.unmodifiableList(items);
+  }
+}`,
+        problem: "final은 참조 재할당만 막는다. 참조 대상이 가변 컬렉션이면 외부 코드가 내부 상태를 바꿀 수 있어 불변 조건이 깨진다.",
+        interview: "final 필드는 객체 불변을 보장하지 않습니다. 가변 객체를 받거나 반환할 때는 방어적 복사와 변경 불가 뷰를 함께 고려해야 합니다."
+      },
+      {
+        name: "HashMap을 멀티스레드 공유 캐시로 사용",
+        category: "Legacy Code",
+        keywords: ["HashMap", "ConcurrentHashMap", "Thread-Safety", "동시성"],
+        bad: `class TokenCache {
+  private final Map<String, Token> cache = new HashMap<>();
+
+  Token get(String key) {
+    Token token = cache.get(key);
+    if (token == null) {
+      token = issueToken(key);
+      cache.put(key, token);
+    }
+    return token;
+  }
+}`,
+        good: `class TokenCache {
+  private final ConcurrentMap<String, Token> cache =
+      new ConcurrentHashMap<>();
+
+  Token get(String key) {
+    return cache.computeIfAbsent(key, this::issueToken);
+  }
+}`,
+        problem: "HashMap은 동기화가 없어 여러 요청 스레드가 동시에 읽고 쓰면 데이터 유실, 중복 생성, 내부 구조 손상이 발생할 수 있다.",
+        interview: "여러 스레드가 공유하는 맵은 ConcurrentHashMap 같은 thread-safe 컬렉션을 사용하고, get 후 put의 경합은 computeIfAbsent처럼 원자적 연산으로 줄여야 합니다."
+      }
+    ];
+
+    const layerTips = [
+      {
+        layer: "Controller",
+        tips: [
+          "먼저 HTTP 어노테이션, 요청 DTO, 응답 타입을 한 줄로 본다.",
+          "Controller가 얇아 보여도 상태코드, 헤더, 응답 DTO가 맞는지 확인한다.",
+          "요청 DTO를 그대로 Service에 넘기는지 본다.",
+          "응답이 Entity인지 Response DTO인지 먼저 확인한다.",
+          "성공/실패 HTTP 상태코드 기준이 보이는지 본다.",
+          "Controller가 Service 결과를 다시 임의로 Map/String으로 감싸는지 본다.",
+          "try-catch로 모든 실패를 200 응답으로 바꾸지 않는지 확인한다.",
+          "비즈니스 판단, 계산, 저장을 직접 하지 않는지 본다.",
+          "@Valid가 필요한 요청인데 경계 검증이 빠졌는지 본다."
+        ]
+      },
+      {
+        layer: "Service",
+        tips: [
+          "입력값 -> 조회 -> 검증 -> 계산 -> 외부 호출 -> 저장 -> 결과 반환 순서로 읽는다.",
+          "Request DTO의 금액, 상태, userId를 서버 상태처럼 신뢰하는지 본다.",
+          "Repository 조회 실패를 null, 빈 객체, 기본값, 빈 목록으로 숨기는지 확인한다.",
+          "조회 실패를 예외로 중단할지, 빈 결과로 반환할지 유스케이스 기준으로 판단하는지 본다.",
+          "도메인 예외가 ErrorCode/HTTP 매핑까지 이어지는지 본다.",
+          "상태 변경이 Entity 메서드로 캡슐화되어 있는지 본다.",
+          "분기 if/switch가 타입 추가 때 계속 수정될 구조인지 본다.",
+          "외부 PG/API 호출이 DB 저장 전후 어디에 있는지 확인한다.",
+          "LocalDateTime.now(), static Util, 직접 new 때문에 테스트가 어려운지 본다."
+        ]
+      },
+      {
+        layer: "Repository",
+        tips: [
+          "단건 조회 실패를 null, Optional, 예외, 빈 객체 중 무엇으로 표현하는지 본다.",
+          "표현 방식 자체보다 Service가 그 결과를 어떻게 해석하는지 따라간다.",
+          "목록 조회에서 null을 반환하는지, 빈 List를 반환하는지 구분한다.",
+          "save가 생성/수정 의미를 구분하는지 확인한다.",
+          "List.add만 해서 같은 id가 중복 저장되지 않는지 본다.",
+          "findAll 결과를 그대로 노출하거나 Service에서 필터링하지 않는지 확인한다.",
+          "Repository 안에 상태 전이 가능 여부, 할인 가능 여부 같은 정책 판단이 들어갔는지 본다."
+        ]
+      },
+      {
+        layer: "Util / 외부 의존성",
+        tips: [
+          "순수 변환 유틸인지, 도메인 정책/외부 호출까지 맡는지 구분한다.",
+          "static 외부 호출 때문에 테스트 fake/mock 대체가 어려운지 본다.",
+          "PG/API/알림 호출이 트랜잭션 안에서 오래 DB 커넥션을 잡지 않는지 확인한다.",
+          "실패 시 재시도, 실패 상태, 보상 처리 여지가 있는지 본다."
+        ]
+      },
+      {
+        layer: "DTO / Entity",
+        tips: [
+          "Request DTO는 사용자의 의도만 담는지 본다.",
+          "Response DTO는 서버 처리 결과만 필요한 만큼 담는지 확인한다.",
+          "Request에 status, amount, role, createdAt처럼 서버가 정할 값이 들어갔는지 본다.",
+          "DTO 형식 검증과 Entity 상태 전이 검증을 같은 것으로 착각하지 않는지 본다.",
+          "Entity public field를 Service가 직접 바꾸는지 본다.",
+          "Builder는 새 객체 생성용, 기존 Entity 상태 전이는 cancel/change 같은 메서드로 표현한다.",
+          "Response DTO가 내부 필드나 Lazy Loading 관계를 과하게 노출하는지 본다."
+        ]
+      },
+      {
+        layer: "Test",
+        tips: [
+          "테스트가 실제로 실행되는 형태인지 본다.",
+          "성공 호출만 있고 assertion이 없는지 확인한다.",
+          "조회 실패, 이미 취소됨, 권한 실패, 외부 API 실패 같은 실패 케이스가 있는지 본다.",
+          "static 저장소, now(), 외부 API 때문에 테스트가 흔들리지 않는지 확인한다."
+        ]
+      }
+    ];
+
+    const scenarioVariants = [
+      {
+        concept: "주문 취소 / 환불",
+        points: [
+          "입력값: orderId, userId, reason만 믿고 금액/status는 서버에서 계산한다.",
+          "외부 호출: PG 환불은 DB 트랜잭션으로 롤백되지 않으므로 저장 순서와 실패 상태를 본다.",
+          "결과 반환: 취소 결과는 Entity가 아니라 취소 응답 DTO로 반환한다."
+        ]
+      },
+      {
+        concept: "쿠폰 사용",
+        points: [
+          "조회: 쿠폰 코드 없음, 이미 사용됨, 만료됨을 같은 실패로 뭉개지 않는지 본다.",
+          "검증: 사용자 소유 쿠폰인지, 사용 가능 기간인지 저장된 쿠폰 기준으로 판단한다.",
+          "저장: used 상태 변경과 이력 저장이 한 유스케이스로 묶이는지 확인한다."
+        ]
+      },
+      {
+        concept: "예약 생성 / 취소",
+        points: [
+          "입력값: 날짜와 인원수는 형식 검증, 중복 예약과 취소 가능 시간은 도메인 검증으로 본다.",
+          "조회: 방/좌석/예약 가능 슬롯을 findAll 후 필터링하지 않는지 확인한다.",
+          "동시성: 같은 시간대 중복 예약을 막는 유니크 키나 락 관점을 떠올린다."
+        ]
+      },
+      {
+        concept: "배송지 변경",
+        points: [
+          "검증: 배송 준비/출고 이후 변경 불가 같은 상태 전이 규칙을 본다.",
+          "DTO: 주소, 우편번호 형식 검증과 주문 소유자 검증 위치를 나눈다.",
+          "외부 호출: 배송사 API 호출이 있다면 DB 저장과 재시도 기준을 같이 본다."
+        ]
+      },
+      {
+        concept: "결제 / 포인트",
+        points: [
+          "입력값: amount, point, paymentStatus를 클라이언트 값 그대로 믿는지 본다.",
+          "저장: 중복 요청 키, 이미 처리된 결제, 포인트 차감 순서를 확인한다.",
+          "테스트: 성공만 아니라 잔액 부족, 중복 요청, PG 실패 케이스가 있는지 본다."
+        ]
+      },
+      {
+        concept: "회원 / 권한 변경",
+        points: [
+          "DTO: role, status, createdAt 같은 서버 결정값이 Request에 있는지 본다.",
+          "권한: 요청 userId와 로그인 사용자, 대상 사용자 권한을 구분한다.",
+          "로그: 이메일, 토큰, 비밀번호 해시 같은 민감정보 노출을 확인한다."
+        ]
+      },
+      {
+        concept: "목록 / 검색 API",
+        points: [
+          "조회: findAll 후 애플리케이션 필터링인지 조건 조회인지 본다.",
+          "성능: 페이징, 정렬 기준, 인덱스, projection/N+1 가능성을 같이 확인한다.",
+          "응답: 검색 결과 없음은 실패가 아니라 빈 목록인 경우가 많다."
+        ]
+      },
+      {
+        concept: "알림 / 메일 / 이벤트",
+        points: [
+          "외부 호출: 메일/알림 실패가 핵심 저장 트랜잭션을 깨야 하는지 분리해서 본다.",
+          "AOP: @Async, @Transactional, cache가 내부 호출로 무력화되지 않는지 본다.",
+          "운영: 재시도, 실패 로그, traceId, 이벤트 발행 시점을 확인한다."
+        ]
+      }
+    ];
+
+    const flowRelation = [
+      {
+        label: "1. Controller",
+        code: `@RestController
+class OrderCancelController {
+  @PostMapping("/cancel")
+  public OrderCancelResponse cancelOrder(
+      @Valid @RequestBody OrderCancelRequest request) {
+    Order order = orderService.cancel(request);
+    return OrderCancelResponse.from(order);
+  }
+}`,
+        note: "요청 DTO를 받고 Service 결과를 Response DTO로 변환한다. Entity 직접 반환 여부를 먼저 본다."
+      },
+      {
+        label: "2. Request DTO",
+        code: `class OrderCancelRequest {
+  Long orderId;
+  Long userId;
+  String reason;
+  Integer requestedRefundAmount;
+  String requestedStatus;
+}`,
+        note: "requestedRefundAmount, requestedStatus처럼 서버가 결정해야 할 값이 요청에 있는지 의심한다."
+      },
+      {
+        label: "3. Service 조회/검증/계산",
+        code: `Order order = orderRepository.findById(request.orderId)
+    .orElseThrow(() -> new OrderCancelException(ORDER_NOT_FOUND));
+
+int refundAmount = calculateRefundAmount(order, request);`,
+        note: "조회 실패를 예외로 중단하는지, 환불 금액을 요청값이 아니라 서버 정책으로 계산하는지 본다."
+      },
+      {
+        label: "4. 외부 호출과 저장",
+        code: `order.requestCancel(request.reason);
+orderRepository.save(order);
+
+OrderCancelUtil.requestExternalPgRefund(order.id, refundAmount);
+
+order.completeCancel(LocalDateTime.now());
+orderRepository.save(order);`,
+        note: "@Transactional은 DB만 롤백한다. 외부 PG 호출은 DB 저장 순서와 실패 상태 기록을 함께 봐야 한다."
+      },
+      {
+        label: "5. Repository",
+        code: `Order findById(Long id);
+Optional<Order> findById(Long id);
+Order getByIdOrThrow(Long id);
+Order findOrEmpty(Long id);
+
+void save(Order order) {
+  orders.add(order);
+}`,
+        note: "Optional만 정답처럼 외우지 않는다. null, 예외, 빈 객체, 빈 목록 중 무엇이 나오든 Service 흐름에서 실패를 숨기는지 본다."
+      },
+      {
+        label: "6. Entity",
+        code: `class Order {
+  void requestCancel(String reason) { ... }
+  void completeCancel(LocalDateTime cancelledAt) { ... }
+}`,
+        note: "Service가 public field를 직접 바꾸지 않고 Entity 상태 전이 메서드로 묶는지 본다."
+      }
+    ];
+
+    const conceptCoverage = [
+      {
+        concept: "Controller / HTTP 계약",
+        points: [
+          "RestController, Mapping, RequestBody, Valid가 실제 요청 경계에 보이는지 본다.",
+          "응답이 Entity, Map, String인지 Response DTO인지 확인한다.",
+          "성공 200/204와 실패 400/404/409 기준이 ControllerAdvice까지 이어지는지 본다.",
+          "Controller에서 DTO -> Entity 변환이나 Mapper 책임을 과하게 떠안는지 본다."
+        ]
+      },
+      {
+        concept: "Service / 유스케이스 흐름",
+        points: [
+          "입력값 -> 조회 -> 검증 -> 계산 -> 외부 호출 -> 저장 -> 결과 반환 순서로 따라간다.",
+          "요청값 신뢰, 조회 실패 은폐, 상태 전이 누락, 외부 호출 순서가 핵심 위험 지점이다.",
+          "Service가 ResponseEntity나 Map을 만들면 HTTP 책임 침범 후보로 본다.",
+          "Repository, Policy, Client를 직접 new 하면 DIP 위반과 테스트 어려움으로 본다."
+        ]
+      },
+      {
+        concept: "Repository / 조회 실패 표현",
+        points: [
+          "Optional뿐 아니라 null, 예외, 빈 객체, 빈 목록, findAll 후 필터링까지 같이 본다.",
+          "Repository가 정책 판단을 하는지, Service가 조회 결과를 유스케이스 의미로 해석하는지 구분한다.",
+          "save가 add인지 put인지, 생성/수정/중복 기준이 있는지 확인한다."
+        ]
+      },
+      {
+        concept: "DTO / Entity / Validation",
+        points: [
+          "Request DTO에 서버 결정값(status, amount, role, time)이 들어왔는지 본다.",
+          "Entity를 API 응답으로 직접 반환하거나 public field로 직접 변경하는지 본다.",
+          "Bean Validation은 형식 검증이고, 소유자/상태/기간 검증은 Service/Domain 규칙으로 본다."
+        ]
+      },
+      {
+        concept: "Exception / Transaction / External API",
+        points: [
+          "RuntimeException 문자열, ErrorCode 없는 예외, 실패를 200으로 감싸는 코드를 찾는다.",
+          "@Transactional은 DB 롤백만 보장하고 PG/API 호출은 되돌리지 못한다.",
+          "외부 호출 전후에 실패 상태 저장, 재시도, 보상 처리 여지가 있는지 본다.",
+          "self-invocation 때문에 @Transactional, @Async 같은 AOP가 적용되지 않는 구조인지 본다."
+        ]
+      },
+      {
+        concept: "SOLID / Test / 운영",
+        points: [
+          "SRP는 계층 책임, OCP는 늘어나는 if/switch, DIP는 직접 new와 테스트 대체 가능성으로 본다.",
+          "테스트는 @Test, assertion, 실패 케이스, fake/mock 대체 가능성을 확인한다.",
+          "로그, 개인정보 노출, API 계약 변경 영향, 리팩토링 우선순위까지 면접 답변에 연결한다.",
+          "Java record, ISP/LSP는 무조건 정답처럼 외우기보다 코드 맥락이 나올 때 꼬리질문으로 연결한다."
+        ]
+      }
+    ];
+
+    const decisionMatrix = [
+      {
+        concept: "Controller 응답 형태",
+        points: [
+          "단순 200 JSON 조회는 Response DTO 직접 반환도 가능하다.",
+          "201 Created, 204 No Content, Location/Header, 파일 다운로드, 캐시 제어가 필요하면 ResponseEntity가 유리하다.",
+          "핵심은 Entity/Map/String을 즉흥 반환하지 않고 외부 API 계약을 안정적으로 고정하는 것이다."
+        ]
+      },
+      {
+        concept: "ResponseEntity 빠른 구분",
+        points: [
+          "필요한 경우: 생성 Location, 커스텀 헤더, 상태코드 분기, 빈 본문, 다운로드/스트리밍처럼 HTTP 표현을 직접 제어한다.",
+          "없어도 되는 경우: 항상 200 JSON이고 본문 DTO만 안정적으로 내려주면 된다.",
+          "주의할 점: ResponseEntity를 쓰는 것 자체보다, Entity 직접 노출과 실패 200 감싸기를 피하는 것이 더 중요하다."
+        ]
+      },
+      {
+        concept: "Service 반환 타입",
+        points: [
+          "Service가 ResponseEntity를 반환하면 HTTP 계층이 내려와서 경계가 흐려진다.",
+          "도메인 Entity, Result 객체, 내부 DTO, Response DTO 중 팀 규칙과 복잡도에 맞게 선택할 수 있다.",
+          "외부 API 스펙 변경이 Service 도메인 흐름까지 흔들리면 결합도가 높은 신호다."
+        ]
+      },
+      {
+        concept: "DTO 변환 위치",
+        points: [
+          "단순 필드 매핑은 Controller에서 Response DTO factory를 호출해도 무방하다.",
+          "여러 Entity 조합, 권한별 필드 마스킹, Lazy Loading 제어가 필요하면 Service/Mapper/query projection을 고려한다.",
+          "Entity가 API 응답 구조를 직접 알거나 Controller가 도메인 생성과 상태 초기화를 맡는 흐름은 피한다."
+        ]
+      },
+      {
+        concept: "조회 실패 표현",
+        points: [
+          "단건 상세/수정/취소에서 값 없음은 보통 404 예외로 바꾸는 것이 자연스럽다.",
+          "목록 검색의 값 없음은 실패가 아니라 빈 List일 수 있다.",
+          "Optional, null, 예외 자체보다 실패를 임시 Entity나 기본값으로 숨겨 정상 흐름처럼 진행하는지가 더 위험하다."
+        ]
+      },
+      {
+        concept: "검증 위치",
+        points: [
+          "@Valid는 null, blank, size 같은 입력 형식 검증에 적합하다.",
+          "소유자, 상태 전이, 금액 계산, 취소 가능 시간은 저장된 데이터와 정책이 필요하므로 Service/Domain에서 검증한다.",
+          "Controller에서 모든 검증을 끝내려 하면 요청 경계와 비즈니스 규칙이 섞인다."
+        ]
+      },
+      {
+        concept: "상태코드 선택",
+        points: [
+          "성공 바디가 있으면 200, 생성은 201, 성공했지만 바디가 없으면 204를 고려한다.",
+          "입력 오류는 400, 대상 없음은 404, 이미 처리됨/상태 충돌은 409로 나누면 FE/QA가 예측하기 쉽다.",
+          "기존 API가 이미 200 wrapper를 쓰고 있다면 호환성 유지와 개선 로드맵을 함께 말한다."
+        ]
+      }
+    ];
+
+    const flowSteps = [
+      {
+        step: "입력값",
+        status: "warn",
+        checks: [
+          "requestedRefundAmount를 클라이언트가 보내면 환불 금액 조작 위험이 있다.",
+          "requestedStatus를 요청값으로 믿으면 저장된 주문 상태 검증이 흔들린다.",
+          "request.userId는 저장된 order.userId와 비교해야 한다."
+        ]
+      },
+      {
+        step: "조회",
+        status: "warn",
+        checks: [
+          "Repository가 null, Optional.empty, 예외, 빈 객체 중 무엇을 반환하는지 본다.",
+          "Optional.empty 자체는 정상 신호일 수 있고, null/빈 객체는 실패를 숨길 위험이 크다.",
+          "Service에서 조회 실패를 임시 Entity, 기본값, 빈 응답으로 바꿔 정상 흐름처럼 진행하는지 확인한다.",
+          "없으면 ORDER_NOT_FOUND로 중단할지, 목록이면 빈 List로 반환할지 유스케이스 기준으로 판단한다."
+        ]
+      },
+      {
+        step: "검증",
+        status: "warn",
+        checks: [
+          "이미 취소된 주문인지 저장된 order.status 기준으로 본다.",
+          "취소 가능 시간은 서버 시간/정책 기준으로 판단한다.",
+          "소유자 검증이 빠지면 다른 사용자의 주문을 취소할 수 있다."
+        ]
+      },
+      {
+        step: "계산",
+        status: "warn",
+        checks: [
+          "환불 금액은 request가 아니라 order.amount와 서버 정책으로 계산한다.",
+          "NORMAL/PREORDER/DIGITAL if가 늘어나면 OCP 위반 후보가 된다.",
+          "간단하면 enum, 커지면 Policy/Strategy 분리를 고려한다."
+        ]
+      },
+      {
+        step: "외부 호출",
+        status: "warn",
+        checks: [
+          "PG/API 호출은 DB 트랜잭션으로 롤백되지 않는다.",
+          "외부 호출이 DB 저장 전인지 후인지 본다.",
+          "실무에서는 이벤트/큐/outbox, 재시도, 실패 상태 기록을 고려한다."
+        ]
+      },
+      {
+        step: "저장",
+        status: "warn",
+        checks: [
+          "Entity 상태 변경이 한 메서드로 묶였는지 본다.",
+          "Repository save가 add만 하면 같은 id가 중복 저장될 수 있다.",
+          "CANCEL_REQUESTED -> CANCELLED처럼 중간 상태가 필요한지 본다."
+        ]
+      },
+      {
+        step: "결과 반환",
+        status: "ok",
+        checks: [
+          "Controller 응답은 Entity가 아니라 Response DTO인지 본다.",
+          "성공 바디가 있으면 200, 바디가 없으면 204를 고려한다.",
+          "실패는 400/404/409 기준이 분리되는지 본다."
+        ]
+      }
+    ];
+
+    const filterRoot = document.getElementById("filters");
+    const cardsRoot = document.getElementById("cards");
+    const searchInput = document.getElementById("searchInput");
+    const count = document.getElementById("count");
+    const empty = document.getElementById("empty");
+    const tabButtons = document.querySelectorAll(".tab-btn");
+    const tabPanels = document.querySelectorAll(".tab-panel");
+    const layerTipsRoot = document.getElementById("layerTips");
+    const scenarioVariantsRoot = document.getElementById("scenarioVariants");
+    const flowRelationRoot = document.getElementById("flowRelation");
+    const conceptCoverageRoot = document.getElementById("conceptCoverage");
+    const decisionMatrixRoot = document.getElementById("decisionMatrix");
+    const flowStepsRoot = document.getElementById("flowSteps");
+    let selectedCategory = "All";
+
+    function escapeHtml(value) {
+      return value
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
+    }
+
+    function highlightJava(value) {
+      const escaped = escapeHtml(value);
+      const placeholders = [];
+      const hold = (html) => {
+        const key = `@@TOKEN_${placeholders.length}@@`;
+        placeholders.push(html);
+        return key;
+      };
+
+      let highlighted = escaped
+        .replace(/(\/\/[^\n]*)/g, (match) => hold(`<span class="tok-comment">${match}</span>`))
+        .replace(/(&quot;.*?&quot;|".*?")/g, (match) => hold(`<span class="tok-string">${match}</span>`))
+        .replace(/\b(@[A-Za-z_][A-Za-z0-9_]*)\b/g, '<span class="tok-anno">$1</span>')
+        .replace(/\b(class|interface|enum|record|public|private|protected|static|final|void|return|new|if|else|for|while|try|catch|throw|throws|extends|implements|null|true|false|this)\b/g, '<span class="tok-keyword">$1</span>')
+        .replace(/\b(String|Long|Integer|Optional|List|Map|ResponseEntity|LocalDate|LocalDateTime|Clock|RuntimeException|Exception)\b/g, '<span class="tok-type">$1</span>')
+        .replace(/\b(\d[\d_]*)\b/g, '<span class="tok-number">$1</span>');
+
+      placeholders.forEach((html, index) => {
+        highlighted = highlighted.replace(`@@TOKEN_${index}@@`, html);
+      });
+
+      return highlighted;
+    }
+
+    function renderFilters() {
+      filterRoot.innerHTML = categories.map(category => `
+        <button class="filter-btn ${category === selectedCategory ? "active" : ""}"
+                data-category="${category}">
+          ${category}
+        </button>
+      `).join("");
+
+      filterRoot.querySelectorAll("button").forEach(button => {
+        button.addEventListener("click", () => {
+          selectedCategory = button.dataset.category;
+          render();
+        });
+      });
+    }
+
+    function buildFollowUps(card) {
+      const text = [
+        card.name,
+        card.category,
+        card.keywords.join(" "),
+        card.problem,
+        card.interview
+      ].join(" ");
+      const questions = [
+        "이 문제가 실제 운영 장애로 이어진다면 어떤 증상으로 나타날까요?",
+        "첫 번째 배포에서 반드시 고칠 1순위는 무엇이고, 왜 그것부터 고치겠습니까?"
+      ];
+
+      const add = (condition, question) => {
+        if (condition) {
+          questions.push(question);
+        }
+      };
+      const has = (...words) => words.some(word => text.includes(word));
+
+      add(card.category === "Controller", "Controller가 맡아도 되는 책임과 Service로 내려야 하는 책임의 경계는 어디인가요?");
+      add(card.category === "Controller", "이 API의 성공/실패 HTTP 상태코드는 각각 무엇으로 내려야 하나요?");
+      add(card.category === "Service", "이 Service 메서드를 입력값 -> 조회 -> 검증 -> 계산 -> 외부 호출 -> 저장 -> 결과 반환 순서로 설명해 보세요.");
+      add(card.category === "Service", "트랜잭션 경계와 외부 의존성 호출 위치를 바꾼다면 어떤 실패 케이스가 줄어드나요?");
+      add(card.category === "Repository", "Repository는 값 없음만 표현해야 하나요, 아니면 404 같은 유스케이스 의미까지 결정해야 하나요?");
+      add(card.category === "Repository", "데이터가 10배 늘어나면 이 조회/저장 방식에서 먼저 의심할 성능 문제는 무엇인가요?");
+      add(card.category === "DTO / Entity", "Request DTO, Response DTO, Entity의 책임을 각각 한 문장으로 나누어 설명해 보세요.");
+      add(card.category === "DTO / Entity", "서버가 결정해야 할 값이 클라이언트 요청에 들어오면 어떤 보안/정합성 문제가 생기나요?");
+      add(card.category === "Exception", "이 실패를 클라이언트가 대응할 수 있게 만들려면 ErrorCode와 HTTP 상태를 어떻게 나누겠습니까?");
+      add(card.category === "Test", "성공 케이스 외에 반드시 추가해야 할 실패 테스트는 무엇인가요?");
+      add(card.category === "Test", "mock 호출 검증과 실제 상태 검증 중 이 코드에서는 무엇이 더 중요하고 왜인가요?");
+      add(card.category === "Util", "이 코드는 순수 Util로 남겨도 되나요, 아니면 Policy/Component로 분리해야 하나요?");
+      add(card.category === "AOP", "이 어노테이션이 실제로 프록시를 거쳐 적용되는 호출 구조인지 어떻게 확인하겠습니까?");
+      add(card.category === "SOLID", "이 코드는 SRP/OCP/DIP/ISP/LSP 중 어떤 원칙과 가장 직접적으로 연결되나요?");
+      add(card.category === "Legacy Code", "모든 문제를 한 번에 고치지 못한다면 어떤 순서로 리팩토링하겠습니까?");
+      add(card.category === "RDBMS" || card.category === "JPA / QueryDSL", "실제 DB에서 실행계획, 인덱스, 페이징, N+1 중 무엇을 먼저 확인하겠습니까?");
+
+      add(has("new", "DI", "DIP", "직접 생성"), "직접 new를 제거하면 테스트, AOP, 설정 주입 측면에서 무엇이 좋아지나요?");
+      add(has("Optional", "null", "빈 객체", "조회 실패"), "값 없음은 Repository와 Service 중 어느 계층에서 어떤 의미로 바뀌어야 하나요?");
+      add(has("트랜잭션", "Transaction", "@Transactional", "외부 호출", "PG"), "외부 API는 성공했는데 DB 저장이 실패하면 어떤 보상/재처리 전략을 두겠습니까?");
+      add(has("Map", "ResponseEntity", "201", "204", "400", "404", "409"), "FE/QA가 이 API 실패를 예측하려면 응답 스펙을 어떻게 고정해야 하나요?");
+      add(has("권한", "소유자", "userId", "role"), "요청 userId나 role을 그대로 믿지 않으려면 서버에서는 무엇과 비교해야 하나요?");
+      add(has("상태", "status", "enum", "OCP"), "상태나 타입이 하나 더 늘어날 때 기존 코드를 얼마나 수정해야 하나요?");
+      add(has("로그", "traceId", "개인정보", "민감정보"), "운영 추적에 필요한 정보와 절대 남기면 안 되는 정보는 어떻게 구분하나요?");
+      add(has("테스트", "Clock", "Random", "static"), "이 코드를 안정적으로 테스트하려면 어떤 의존성을 주입하거나 격리해야 하나요?");
+      add(has("findAll", "N+1", "인덱스", "페이징", "QueryDSL"), "목록 API라면 조건 조회, 정렬 안정성, 페이지 크기 제한을 어떻게 설계하겠습니까?");
+      add(has("Entity", "public field", "상태 변경"), "Entity에 상태 변경 메서드를 두면 Service에는 어떤 책임만 남아야 하나요?");
+
+      return [...new Set(questions)].slice(0, 4);
+    }
+
+    function buildFollowUpAnswer(card, question) {
+      const context = `${card.name} / ${card.category}`;
+      const base = `이 카드에서는 ${context} 관점에서 답하면 좋습니다. 먼저 코드가 어떤 계층 책임을 흐리는지 짚고, 그 다음 운영 장애나 협업 영향, 마지막으로 안전한 개선 순서를 말합니다.`;
+      const text = [
+        card.name,
+        card.category,
+        card.keywords.join(" "),
+        card.problem,
+        card.interview
+      ].join(" ");
+      const has = (...words) => words.some(word => text.includes(word));
+
+      if (question.includes("실제 운영 장애")) {
+        if (has("N+1", "findAll", "인덱스", "페이징", "QueryDSL", "RDBMS", "JPA")) {
+          return `운영에서는 응답 지연, DB CPU 상승, 커넥션 풀 고갈, 타임아웃으로 나타날 가능성이 큽니다. 특히 목록/검색 API라면 데이터가 적을 때는 괜찮아 보여도 데이터가 늘면서 쿼리 횟수나 스캔 범위가 급격히 커질 수 있습니다. 면접에서는 "실행계획, 쿼리 횟수, 페이징/정렬 기준, 인덱스 사용 여부를 먼저 확인하겠습니다"라고 말하면 좋습니다.`;
+        }
+        if (has("Map", "ResponseEntity", "API 계약", "201", "204", "400", "404", "409", "하위 호환성")) {
+          return `운영에서는 FE가 실패를 성공으로 처리하거나, QA가 케이스를 재현하지 못하거나, 응답 필드 변경으로 연동이 깨지는 식으로 나타납니다. 실패가 200으로 내려가면 모니터링도 실패를 놓칠 수 있습니다. 그래서 응답 DTO, ErrorCode, HTTP 상태코드, 하위 호환성 정책을 API 계약으로 고정해야 합니다.`;
+        }
+        if (has("Test", "테스트", "mock", "SpringBootTest", "static 데이터", "순서 의존")) {
+          return `운영 장애 자체보다 회귀를 미리 잡지 못하는 문제가 큽니다. 성공 케이스만 있거나 mock 호출만 검증하면 권한 실패, 이미 처리됨, 외부 API 실패 같은 핵심 실패 흐름이 배포 전 드러나지 않습니다. 테스트는 실제 정책 결과와 저장 상태를 고정해서 회귀 미탐지를 줄이는 장치라고 설명하면 좋습니다.`;
+        }
+        if (has("로그", "traceId", "개인정보", "민감정보", "System.out")) {
+          return `운영에서는 장애가 났는데 어떤 요청에서 실패했는지 추적하지 못하거나, 반대로 민감정보가 로그/응답에 노출되는 문제가 생깁니다. traceId, orderId, userId 같은 안전한 추적 키는 남기고, 비밀번호/토큰/카드번호/개인정보 원문은 마스킹하거나 남기지 않아야 합니다.`;
+        }
+        if (has("Magic Number", "중복 코드", "Clean Code", "Legacy Code", "LSP", "ISP")) {
+          return `즉시 장애로 터지지 않을 수는 있지만 변경 누락과 회귀 위험이 커집니다. 정책 숫자나 중복 로직이 흩어져 있으면 한 곳만 수정하고 다른 곳을 놓쳐 운영 결과가 달라질 수 있습니다. 이런 코드는 먼저 테스트로 현재 동작을 고정한 뒤, 의미 있는 이름과 작은 책임 단위로 점진 개선하는 편이 안전합니다.`;
+        }
+        if (has("트랜잭션", "외부 호출", "PG", "idempotency", "중복 요청")) {
+          return `운영에서는 PG는 성공했는데 우리 DB는 실패 상태로 남거나, 재시도 때문에 결제/환불이 중복되는 식으로 나타납니다. 특히 외부 API는 DB 트랜잭션으로 롤백되지 않기 때문에 요청 상태 저장, 외부 호출 결과 기록, 재시도/보상 처리 기준이 필요합니다.`;
+        }
+        if (has("권한", "소유자", "userId", "role", "서버 결정값", "amount", "status")) {
+          return `운영에서는 다른 사용자의 리소스를 변경하거나, 금액/상태/권한을 조작하는 보안 문제로 이어질 수 있습니다. 클라이언트 요청값은 사용자 의도로만 보고, 최종 권한과 금액과 상태는 인증 컨텍스트와 저장된 데이터, 서버 정책으로 다시 판단해야 합니다.`;
+        }
+      }
+
+      if (question.includes("첫 번째 배포")) {
+        if (has("N+1", "findAll", "인덱스", "페이징", "QueryDSL", "RDBMS", "JPA")) {
+          return `첫 배포에서는 전체 구조를 갈아엎기보다 느린 조회를 직접 줄이는 조치를 우선합니다. findAll 필터링을 조건 조회로 바꾸고, 페이징/정렬 기준을 고정하며, N+1이면 fetch join, batch size, projection 중 현재 화면 요구에 맞는 방법을 적용합니다. 이후 실행계획과 지표로 개선 효과를 확인합니다.`;
+        }
+        if (has("Test", "테스트", "mock", "SpringBootTest", "static 데이터", "순서 의존")) {
+          return `첫 배포에서는 리팩토링보다 실패 케이스를 먼저 테스트로 고정합니다. 조회 실패, 권한 실패, 이미 처리됨, 외부 API 실패, 중복 요청 같은 핵심 흐름을 잡아두면 이후 구조 개선을 해도 회귀를 확인할 수 있습니다. 테스트 비용이 큰 경우에는 순수 정책 단위 테스트와 필요한 슬라이스 테스트로 나눕니다.`;
+        }
+        if (has("Magic Number", "중복 코드", "Clean Code", "Legacy Code", "LSP", "ISP")) {
+          return `장애 위험이 낮은 클린코드성 문제라면 첫 배포에서 무리하게 전부 고치지 않습니다. 먼저 테스트나 로그로 현재 동작을 고정하고, 변경이 잦은 정책 숫자/중복 로직부터 작은 단위로 정리합니다. 면접에서는 "운영 위험이 낮으면 점진 개선 대상으로 두겠습니다"라고 말하는 편이 현실적입니다.`;
+        }
+        if (has("Map", "ResponseEntity", "API 계약", "201", "204", "400", "404", "409", "하위 호환성")) {
+          return `첫 배포에서는 클라이언트가 실패를 예측할 수 있도록 응답 계약을 고정하는 것이 우선입니다. ErrorResponse, ErrorCode, HTTP 상태코드 기준을 정하고, 기존 필드를 바로 삭제하지 말고 하위 호환성을 유지합니다. FE/QA와 케이스를 맞춘 뒤 내부 구조를 정리합니다.`;
+        }
+      }
+      const answerByQuestion = [
+        {
+          match: "실제 운영 장애",
+          answer: `운영에서는 단순히 코드가 지저분한 수준이 아니라, 실패가 늦게 발견되거나 잘못된 상태가 저장되는 문제로 나타납니다. 예를 들어 요청값을 믿으면 금액/권한 조작이 생길 수 있고, 조회 실패를 숨기면 없는 데이터를 정상 처리한 것처럼 저장할 수 있습니다. 면접에서는 "장애 영향은 데이터 정합성, 보안, API 계약, 운영 추적성 순서로 보겠습니다"라고 말하면 3~5년 차답게 들립니다.`
+        },
+        {
+          match: "첫 번째 배포",
+          answer: `첫 배포에서는 구조를 예쁘게 바꾸는 것보다 장애 위험을 먼저 줄입니다. 우선 권한/소유자 검증, 요청값 신뢰 제거, 조회 실패 명확화, 외부 호출과 저장 순서처럼 데이터 정합성에 직접 연결되는 부분을 고칩니다. 그 다음 DTO 분리, 정책 객체 분리, 테스트 확장을 단계적으로 진행하겠다고 말하면 현실적인 리팩토링 답변이 됩니다.`
+        },
+        {
+          match: "Controller가 맡아도 되는 책임",
+          answer: `Controller는 HTTP 요청을 받고, 형식 검증을 트리거하고, Service 결과를 HTTP 응답으로 변환하는 경계 역할에 집중해야 합니다. 가격 계산, 상태 변경 가능 여부 판단, Repository 저장, 외부 API 호출은 Service나 Domain/Component로 내려야 합니다. 경계 기준은 "HTTP 표현인가, 비즈니스 규칙인가"로 나누면 됩니다.`
+        },
+        {
+          match: "성공/실패 HTTP 상태코드",
+          answer: `성공해서 응답 바디가 있으면 보통 200, 생성이면 201, 바디가 없으면 204를 봅니다. 요청 형식이나 값이 잘못됐으면 400, 대상 리소스가 없으면 404, 이미 취소됨/상태상 불가처럼 현재 상태와 충돌하면 409가 자연스럽습니다. 중요한 건 Controller마다 다르게 만들지 않고 ErrorResponse와 ControllerAdvice로 일관되게 고정하는 것입니다.`
+        },
+        {
+          match: "입력값 -> 조회 -> 검증",
+          answer: `이 순서로 읽으면 Service의 흐름이 보입니다. 입력값에서는 클라이언트가 보낸 amount/status/userId/role을 믿는지 보고, 조회에서는 값 없음이 명확한 예외로 바뀌는지 봅니다. 검증은 저장된 Entity 상태 기준인지 확인하고, 계산은 서버 정책으로 하는지 봅니다. 외부 호출과 저장은 순서와 실패 보상까지 보고, 마지막 반환은 HTTP 객체가 아니라 도메인 결과나 Response DTO인지 확인합니다.`
+        },
+        {
+          match: "트랜잭션 경계와 외부 의존성",
+          answer: `DB 트랜잭션은 DB 변경만 롤백할 수 있고 PG/API/메일 같은 외부 호출은 되돌릴 수 없습니다. 그래서 외부 호출을 트랜잭션 안에서 오래 잡으면 커넥션 점유와 타임아웃 위험이 생기고, 외부 성공 후 DB 실패가 나면 정합성이 깨집니다. 실무적으로는 요청 상태 저장, 외부 호출, 성공/실패 상태 반영, 재시도나 보상 처리를 분리해서 설명하면 좋습니다.`
+        },
+        {
+          match: "Repository는 값 없음",
+          answer: `Repository는 보통 저장소에서 값이 있는지 없는지를 표현하는 책임에 가깝습니다. Optional.empty, null, 빈 목록 같은 표현은 저장소 접근 결과이고, 그것을 404로 볼지 빈 결과로 볼지 새로 생성할지는 Service 유스케이스가 결정합니다. 단건 상세/수정/취소는 없으면 예외가 자연스럽고, 목록 검색은 결과 없음이 빈 목록일 수 있습니다.`
+        },
+        {
+          match: "데이터가 10배",
+          answer: `데이터가 늘어나면 findAll 후 애플리케이션 필터링, 반복문 안 Repository 조회, 페이징 없는 목록 반환, 정렬 기준 누락, N+1을 먼저 의심합니다. 실제 DB라면 where 조건, 인덱스 사용 가능성, limit/offset 또는 cursor, 필요한 컬럼만 조회하는 projection까지 봐야 합니다. 면접에서는 "작을 때는 동작하지만 데이터 증가 시 실행계획과 응답 시간이 깨질 수 있습니다"라고 말하면 좋습니다.`
+        },
+        {
+          match: "Request DTO, Response DTO, Entity",
+          answer: `Request DTO는 외부 입력 계약이고, Response DTO는 외부로 돌려줄 응답 계약이며, Entity는 내부 도메인 상태와 저장 모델입니다. Request에 서버 결정값을 넣거나 Entity를 그대로 응답하면 외부 계약과 내부 모델이 강하게 결합됩니다. 그래서 요청/응답/도메인 모델을 분리하고 변환 책임을 Controller나 Service 경계에서 명확히 가져가는 것이 좋습니다.`
+        },
+        {
+          match: "서버가 결정해야 할 값",
+          answer: `amount, status, role, createdAt, ownerId 같은 값은 서버가 저장된 데이터와 정책으로 결정해야 합니다. 클라이언트가 보낸 값을 그대로 믿으면 권한 상승, 금액 조작, 상태 우회 같은 문제가 생깁니다. 면접에서는 "사용자 의도는 요청으로 받되, 최종 상태와 금액은 서버의 현재 데이터 기준으로 재계산하겠습니다"라고 답하면 좋습니다.`
+        },
+        {
+          match: "ErrorCode와 HTTP 상태",
+          answer: `클라이언트가 대응할 수 있게 실패를 분류해야 합니다. 잘못된 입력은 400, 대상 없음은 404, 이미 처리됨이나 상태 충돌은 409, 서버 내부 장애는 500으로 나눌 수 있습니다. ErrorCode는 FE/QA가 분기할 수 있는 안정적인 계약이고, message는 사람이 이해하기 위한 설명으로 두는 편이 좋습니다.`
+        },
+        {
+          match: "성공 케이스 외",
+          answer: `성공만 보면 코드가 실제 정책을 지키는지 알 수 없습니다. 조회 실패, 권한 실패, 이미 취소됨/이미 처리됨, 잘못된 입력, 외부 API 실패, 중복 요청을 최소 실패 케이스로 추가해야 합니다. 특히 상태 변경 유스케이스는 실패했을 때 DB 상태가 바뀌지 않았는지도 함께 검증해야 합니다.`
+        },
+        {
+          match: "mock 호출 검증",
+          answer: `mock verify는 협력자를 호출했는지 확인하는 데는 좋지만, 유스케이스 결과 상태를 보장하지는 못합니다. 이 카드에서는 실제로 Entity 상태가 바뀌었는지, 예외가 의도대로 발생했는지, 저장된 결과가 기대와 맞는지 검증하는 것이 더 중요합니다. 호출 검증은 보조이고 핵심은 정책 결과와 상태 변화입니다.`
+        },
+        {
+          match: "순수 Util",
+          answer: `문자열 변환, 날짜 포맷처럼 입력이 같으면 항상 같은 결과를 내고 외부 상태에 의존하지 않으면 Util로 둘 수 있습니다. 반대로 환불 가능 여부, 배송 정책, 알림 발송처럼 도메인 규칙이나 부작용이 있으면 Policy, Validator, Notifier, Component로 분리하는 편이 좋습니다. 기준은 "정책 변경 이유가 있는가, 테스트 대체가 필요한가"입니다.`
+        },
+        {
+          match: "프록시를 거쳐",
+          answer: `Spring의 @Transactional, @Async 같은 기능은 보통 프록시를 거쳐 호출될 때 적용됩니다. 같은 클래스 내부 메서드 호출, private 메서드, final 제약 등이 있으면 기대와 다르게 동작할 수 있습니다. @Async라면 @EnableAsync 설정, 외부 빈을 통한 호출, 반환 타입과 예외 처리 방식까지 확인해야 합니다. 면접에서는 "public 유스케이스 경계에서 외부 빈이 호출하는 구조인지 확인하겠습니다"라고 말하면 좋습니다.`
+        },
+        {
+          match: "SRP/OCP/DIP/ISP/LSP",
+          answer: `먼저 가장 직접적인 변경 이유를 봅니다. 책임이 여러 개면 SRP, 타입/상태 추가 때 if/switch를 계속 고치면 OCP, 구체 구현을 직접 new 하면 DIP, 너무 큰 인터페이스면 ISP, 하위 타입이 부모 계약을 깨면 LSP입니다. 중요한 건 원칙 이름만 말하는 게 아니라 "변경이 생겼을 때 어디까지 같이 흔들리는지"로 설명하는 것입니다.`
+        },
+        {
+          match: "모든 문제를 한 번에",
+          answer: `레거시에서는 모든 것을 한 번에 고치기보다 장애 위험 순서로 나눠야 합니다. 첫 단계는 권한 검증, 요청값 신뢰 제거, 조회 실패 처리, 트랜잭션/외부 호출 순서처럼 데이터 정합성과 보안에 직결되는 부분입니다. 그 다음 DTO/Entity 분리, 정책 객체 분리, 테스트 보강을 이어가면 현실적인 리팩토링 계획이 됩니다.`
+        },
+        {
+          match: "실제 DB에서",
+          answer: `먼저 현재 쿼리가 조건 조회를 하는지, findAll 후 필터링인지 봅니다. JPA N+1이면 fetch join, batch size, DTO projection을 비교하고, QueryDSL 동적 조건이면 null 조건 조립과 where 조건 누락을 확인합니다. Liquibase 같은 스키마 변경은 변경 이력, 배포 순서, rollback 전략을 봅니다. 3~5년 차 답변에서는 "데이터가 늘어났을 때 어떤 쿼리가 몇 번 나가고 어떤 인덱스를 탈 수 있는지 보겠습니다"까지 말하면 좋습니다.`
+        },
+        {
+          match: "직접 new",
+          answer: `직접 new를 제거하면 Spring DI로 의존성 교체가 가능해지고, 테스트에서는 fake/mock을 넣기 쉬워집니다. 또한 Service에 붙은 트랜잭션, AOP, 설정 주입 같은 프레임워크 기능을 정상적으로 활용할 수 있습니다. Controller나 Service가 객체 생성까지 맡으면 계층 책임과 테스트 가능성이 동시에 나빠집니다.`
+        },
+        {
+          match: "값 없음",
+          answer: `값 없음은 저장소의 조회 결과이고, 그 의미는 유스케이스에서 결정해야 합니다. 상세 조회나 취소처럼 대상이 반드시 있어야 하는 흐름은 도메인 예외로 바꾸고, 목록 검색은 빈 목록으로 반환하는 것이 자연스럽습니다. 문제는 Optional이냐 null이냐 하나가 아니라, 실패를 정상 데이터처럼 숨기는 흐름입니다.`
+        },
+        {
+          match: "외부 API는 성공",
+          answer: `외부 API 성공 후 DB 저장이 실패하면 외부 세계와 우리 DB 상태가 달라집니다. 예를 들어 PG는 환불됐는데 주문은 PAID로 남을 수 있습니다. 이를 줄이려면 요청 상태를 먼저 저장하고, 외부 호출 결과를 별도 상태로 반영하며, 실패 시 재시도/보상/운영 조회가 가능하도록 기록을 남겨야 합니다.`
+        },
+        {
+          match: "FE/QA",
+          answer: `FE/QA가 예측하려면 응답 필드, ErrorCode, HTTP 상태코드가 안정적이어야 합니다. Map처럼 매번 필드가 달라질 수 있는 응답보다 Response DTO를 두고, 실패도 ErrorResponse로 통일하는 것이 좋습니다. 그래야 QA 시나리오와 FE 분기 처리가 코드 계약에 맞춰집니다.`
+        },
+        {
+          match: "요청 userId",
+          answer: `요청 userId나 role은 조작될 수 있으므로 그대로 믿으면 안 됩니다. 인증 컨텍스트의 사용자와 저장된 Entity의 ownerId, 권한 정책을 비교해야 합니다. 예를 들어 주문 취소는 request.userId가 아니라 로그인 사용자와 order.ownerId가 일치하는지 확인해야 합니다.`
+        },
+        {
+          match: "상태나 타입",
+          answer: `상태나 타입이 추가될 때마다 기존 if/switch를 여러 곳 수정해야 한다면 OCP에 약한 구조입니다. 작은 규모에서는 enum 메서드로 충분할 수 있고, 정책이 커지면 Strategy/Policy로 분리하는 편이 좋습니다. 핵심은 새 타입 추가가 기존 코드의 회귀 위험을 얼마나 키우는지입니다.`
+        },
+        {
+          match: "운영 추적",
+          answer: `운영 추적에는 traceId, orderId, userId처럼 원인을 찾는 안전한 식별자가 필요합니다. 반대로 비밀번호, 토큰, 카드번호, 개인정보 원문은 로그나 에러 응답에 남기면 안 됩니다. 식별자는 마스킹/해시 처리하고, 실패 지점과 도메인 키를 함께 남기는 것이 좋습니다.`
+        },
+        {
+          match: "안정적으로 테스트",
+          answer: `시간, 랜덤, 외부 API, static 저장소처럼 실행 환경에 따라 바뀌는 요소를 격리해야 합니다. Clock, RandomGenerator, Client 인터페이스, FakeRepository처럼 주입 가능한 의존성으로 바꾸면 테스트에서 값을 고정할 수 있습니다. 그래야 실패 케이스도 반복 가능하게 검증할 수 있습니다.`
+        },
+        {
+          match: "목록 API",
+          answer: `목록 API는 조건 조회, 정렬 기준, 페이지 크기 제한을 먼저 고정해야 합니다. findAll 후 필터링은 데이터가 늘어나면 위험하고, 정렬 기준이 불안정하면 페이지가 중복되거나 누락될 수 있습니다. 필요한 컬럼만 조회하고, 인덱스를 탈 수 있는 조건과 페이징 전략을 같이 봐야 합니다.`
+        },
+        {
+          match: "Entity에 상태 변경",
+          answer: `Entity는 자신의 상태 전이 규칙을 메서드로 캡슐화할 수 있습니다. 그러면 Service는 요청 흐름 조율, 조회, 권한 검증 호출, 트랜잭션 경계, 외부 의존성 호출 같은 유스케이스 orchestration에 집중합니다. Entity가 외부 API나 응답 조립까지 맡으면 다시 과책임이 됩니다.`
+        }
+      ];
+
+      const matched = answerByQuestion.find(item => question.includes(item.match));
+      if (matched) {
+        return matched.answer;
+      }
+      return base;
+    }
+
+    function matches(card, query) {
+      const followUps = buildFollowUps(card)
+        .map(question => `${question} ${buildFollowUpAnswer(card, question)}`)
+        .join(" ");
+      const source = [
+        card.name,
+        card.category,
+        card.keywords.join(" "),
+        card.problem,
+        card.interview,
+        followUps,
+        card.bad,
+        card.good
+      ].join(" ").toLowerCase();
+      return source.includes(query.toLowerCase());
+    }
+
+    function renderCards(filtered) {
+      cardsRoot.innerHTML = filtered.map(card => `
+        <article class="card">
+          <div class="card-head">
+            <div class="card-title-row">
+              <h2>${escapeHtml(card.name)}</h2>
+              <span class="category">${escapeHtml(card.category)}</span>
+            </div>
+            <div class="tags">
+              ${card.keywords.map(keyword => `<span class="tag">${escapeHtml(keyword)}</span>`).join("")}
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="quiz-reveal-row">
+              <button class="reveal-btn">👁️ 정답 및 해설 보기</button>
+            </div>
+            <div class="compare">
+              <section class="code-box bad">
+                <div class="code-label">잘못된 코드</div>
+                <pre><code>${highlightJava(card.bad)}</code></pre>
+              </section>
+              <section class="code-box good">
+                <div class="code-label">리팩토링된 코드</div>
+                <pre><code>${highlightJava(card.good)}</code></pre>
+              </section>
+            </div>
+            <p class="problem"><strong>무엇이 문제인지:</strong> ${escapeHtml(card.problem)}</p>
+            <p class="interview">${escapeHtml(card.interview)}</p>
+            <section class="followups">
+              <h3 class="followups-title">면접 꼬리질문</h3>
+              ${buildFollowUps(card).map(question => `
+                <details class="followup-item">
+                  <summary>${escapeHtml(question)}</summary>
+                  <div class="followup-answer">${escapeHtml(buildFollowUpAnswer(card, question))}</div>
+                </details>
+              `).join("")}
+            </section>
+          </div>
+        </article>
+      `).join("");
+    }
+
+    function renderLayerTips() {
+      layerTipsRoot.innerHTML = layerTips.map(item => `
+        <article class="tip-card">
+          <h3>${escapeHtml(item.layer)}</h3>
+          <ul>
+            ${item.tips.map(tip => `<li>${escapeHtml(tip)}</li>`).join("")}
+          </ul>
+        </article>
+      `).join("");
+    }
+
+    function renderScenarioVariants() {
+      scenarioVariantsRoot.innerHTML = scenarioVariants.map(item => `
+        <article class="tip-card">
+          <h3>${escapeHtml(item.concept)}</h3>
+          <ul>
+            ${item.points.map(point => `<li>${escapeHtml(point)}</li>`).join("")}
+          </ul>
+        </article>
+      `).join("");
+    }
+
+    function renderFlowRelation() {
+      flowRelationRoot.innerHTML = flowRelation.map(item => `
+        <article class="flow-step">
+          <h3>${escapeHtml(item.label)}</h3>
+          <section class="code-box good">
+            <div class="code-label">관계 코드</div>
+            <pre><code>${highlightJava(item.code)}</code></pre>
+          </section>
+          <p class="problem"><strong>봐야 할 지점:</strong> ${escapeHtml(item.note)}</p>
+        </article>
+      `).join("");
+    }
+
+    function renderConceptCoverage() {
+      conceptCoverageRoot.innerHTML = conceptCoverage.map(item => `
+        <article class="tip-card">
+          <h3>${escapeHtml(item.concept)}</h3>
+          <ul>
+            ${item.points.map(point => `<li>${escapeHtml(point)}</li>`).join("")}
+          </ul>
+        </article>
+      `).join("");
+    }
+
+    function renderDecisionMatrix() {
+      decisionMatrixRoot.innerHTML = decisionMatrix.map(item => `
+        <article class="tip-card">
+          <h3>${escapeHtml(item.concept)}</h3>
+          <ul>
+            ${item.points.map(point => `<li>${escapeHtml(point)}</li>`).join("")}
+          </ul>
+        </article>
+      `).join("");
+    }
+
+    function renderFlowSteps() {
+      flowStepsRoot.innerHTML = flowSteps.map(item => `
+        <article class="flow-step ${item.status}">
+          <h3>${escapeHtml(item.step)}</h3>
+          <ul>
+            ${item.checks.map(check => `<li>${escapeHtml(check)}</li>`).join("")}
+          </ul>
+        </article>
+      `).join("");
+    }
+
+    function switchTab(tabId) {
+      tabButtons.forEach(button => {
+        button.classList.toggle("active", button.dataset.tab === tabId);
+      });
+      tabPanels.forEach(panel => {
+        panel.classList.toggle("active", panel.id === tabId);
+      });
+    }
+
+    function render() {
+      const query = searchInput.value.trim();
+      const filtered = cards.filter(card => {
+        const categoryMatched = selectedCategory === "All" || card.category === selectedCategory;
+        const queryMatched = query.length === 0 || matches(card, query);
+        return categoryMatched && queryMatched;
+      });
+
+      renderFilters();
+      renderCards(filtered);
+      count.textContent = `${filtered.length} / ${cards.length}개 표시`;
+      empty.style.display = filtered.length === 0 ? "block" : "none";
+    }
+
+    searchInput.addEventListener("input", render);
+    tabButtons.forEach(button => {
+      button.addEventListener("click", () => switchTab(button.dataset.tab));
+    });
+
+    // 퀴즈 모드 글로벌 토글 및 이벤트 위임 바인딩
+    const blindToggle = document.getElementById("blindToggle");
+    let blindMode = false;
+    
+    blindToggle.addEventListener("click", () => {
+      blindMode = !blindMode;
+      document.body.classList.toggle("blind-mode-active", blindMode);
+      if (blindMode) {
+        blindToggle.textContent = "👁️ 퀴즈 모드 끄기";
+        blindToggle.style.background = "#eefaf2";
+        blindToggle.style.borderColor = "#a7dfb8";
+        blindToggle.style.color = "#177245";
+      } else {
+        blindToggle.textContent = "🙈 퀴즈 모드 켜기";
+        blindToggle.style.background = "#fff5f5";
+        blindToggle.style.borderColor = "#feb8b8";
+        blindToggle.style.color = "#b42318";
+        // 모든 카드의 정답 공개 상태 초기화
+        document.querySelectorAll(".card").forEach(c => {
+          c.classList.remove("revealed");
+          const btn = c.querySelector(".reveal-btn");
+          if (btn) btn.textContent = "👁️ 정답 및 해설 보기";
+        });
+      }
+    });
+
+    cardsRoot.addEventListener("click", (e) => {
+      if (e.target.classList.contains("reveal-btn")) {
+        const card = e.target.closest(".card");
+        if (card) {
+          card.classList.toggle("revealed");
+          if (card.classList.contains("revealed")) {
+            e.target.textContent = "🙈 정답 및 해설 가리기";
+          } else {
+            e.target.textContent = "👁️ 정답 및 해설 보기";
+          }
+        }
+      }
+    });
+
+    const conceptsData = [
+      {
+        title: "1. JVM 메모리 구조를 설명하시오.",
+        easy: "회사의 사무실 구조와 같습니다. 클래스 설계도면을 두는 공용 문서 캐비닛(Method Area), 직원들이 쉴 새 없이 생성하고 버리는 종이 서류와 쓰레기더미(Heap - 객체 저장), 직원 개개인의 개인 작업대(Stack - 스레드별 개별 공간)로 나뉩니다.",
+        keywords: ["Method Area (Metaspace)", "Heap (Young/Old)", "Stack (Thread-safe)", "PC Register", "Native Method Stack"],
+        interview: "JVM 메모리는 스레드 공용 영역인 Method Area와 Heap, 스레드 개별 영역인 Stack, PC Register, Native Method Stack으로 구분됩니다. Method Area는 클래스 메타정보와 static 변수가 저장되며, Heap은 모든 객체 인스턴스가 동적 할당되어 GC의 대상이 됩니다. Stack은 스레드마다 메서드 호출 시 프레임이 생성되어 지역 변수와 연산 결과를 저장하며, 메서드 종료 시 즉시 해제됩니다."
+      },
+      {
+        title: "2. GC가 무엇이고, Minor GC와 Major GC 차이는?",
+        easy: "회사의 쓰레기통 비우기입니다. Young 영역은 책상 위의 소형 쓰레기통이라 금방 차고 매번 신속히 비웁니다(Minor GC). 하지만 이 쓰레기통에서 살아남아 오래 적재된 서류들은 대형 창고(Old 영역)로 가고, 이 대형 창고가 가득 차면 대청소(Major GC / Full GC)를 해야 합니다. 이때 청소하는 동안 직원들은 작업을 일시 중단해야 합니다(Stop-The-World).",
+        keywords: ["Minor GC (Young 영역)", "Major/Full GC (Old 영역)", "Stop-The-World (STW)", "Mark and Sweep", "Garbage Collection"],
+        interview: "GC는 JVM Heap 영역에서 참조되지 않는 객체를 해제하는 메모리 관리 작업입니다. Young 영역에서 발생하는 Minor GC는 수명이 짧은 객체를 빠르게 청소합니다. 반면 Old 영역에서 발생하는 Major GC는 크기가 크고 오래 참조된 객체를 해제하며, 작업 시 JVM이 스레드를 일시 정지시키는 Stop-The-World 현상이 발생하므로, GC 튜닝은 이 STW 대기 시간을 최소화하는 것이 핵심 목표입니다."
+      },
+      {
+        title: "3. equals()와 hashCode()를 같이 재정의해야 하는 이유는?",
+        easy: "도서관 책 분류와 같습니다. equals()는 두 책의 내용이 똑같은지 비교하는 작업이고, hashCode()는 책을 책장에 꽂을 때의 번호표입니다. 내용이 같은 책이라면 반드시 같은 번호표를 받아야 합니다. 그렇지 않으면 도서관 사서(HashMap)가 책을 찾을 때 엉뚱한 책장을 찾아가서 책이 없다고 오판하게 됩니다.",
+        keywords: ["동등성(Equality)과 동일성(Identity)", "해시 기반 자료구조(HashMap)", "해시 충돌", "동시 재정의 계약", "버킷(Bucket)"],
+        interview: "자바 객체의 동일성은 물리적 주소 비교(==)이며, 동등성은 논리적 데이터 값 비교(equals())입니다. equals()를 재정의하여 두 객체를 논리적으로 같다고 정의했다면, 해시 기반 자료구조(HashSet, HashMap)가 정상 작동하도록 hashCode()도 동일한 해시값을 반환하도록 재정의해야 합니다. 그렇지 않으면 해시코드가 달라 맵 내부에서 엉뚱한 버킷을 조회하여 논리적으로 같은 객체를 찾지 못하거나 중복 저장하는 오류가 발생합니다."
+      },
+      {
+        title: "4. HashMap의 동작 원리를 설명하시오.",
+        easy: "사물함 키 분류입니다. key의 이름을 숫자로 변환한 뒤(hashCode), 그 숫자를 사물함 번호로 써서 물건을 넣습니다. 만약 다른 이름인데 같은 사물함 번호가 나오면(해시 충돌), 사물함 안에 서랍(LinkedList)을 두어 차곡차곡 연결해 둡니다. 서랍이 너무 많아지면(Java 8+ 기준 8개 이상) 물건을 찾기 쉽게 계층형 폴더 구조(Tree / Red-Black Tree)로 리팩토링합니다.",
+        keywords: ["해시 버킷", "해시 충돌(Hash Collision)", "LinkedList", "Red-Black Tree", "조회 성능 O(1) -> O(log N)"],
+        interview: "HashMap은 Key의 hashCode()를 버킷 배열 인덱스로 매핑하여 데이터를 저장하며, 평균 O(1)의 속도로 조회합니다. 해시 충돌 발생 시 Java 8 이후부터는 최초 LinkedList 구조(Separate Chaining)를 취하되, 한 버킷 내 충돌 노드가 8개 이상으로 증가하면 Red-Black Tree 구조로 동적 변환하여 최악의 상황에서도 O(log N)의 조회 성능을 보장합니다."
+      },
+      {
+        title: "5. HashMap과 ConcurrentHashMap의 차이는?",
+        easy: "1인용 메모장(HashMap)과 다인용 회의록(ConcurrentHashMap)의 차이입니다. 1인용 메모장은 여러 사람이 동시에 낙서하면 글씨가 뭉개지고 찢어집니다(Thread-unsafe). 회의록은 여러 사람이 쓰더라도 각 문단이나 페이지마다 자물쇠(Lock 분할)를 채워 한 번에 한 사람만 적게 하므로 안전하게 공유할 수 있습니다.",
+        keywords: ["Thread-Safety", "동기화 블록", "Lock Striping (세분화 락)", "Segment / CAS (Compare-And-Swap)", "동시 수정 성능"],
+        interview: "HashMap은 동기화 처리가 없어 멀티스레드 환경에서 데이터 오염이나 무한 루프 위험이 있습니다. 반면 ConcurrentHashMap은 thread-safe하면서도 HashTable처럼 전체 맵을 잠그지 않고, 버킷 단위로 락 범위를 세분화하는 Lock Striping 기법과 CAS 연산을 사용하여 읽기/쓰기 동시성 성능을 획기적으로 개선한 스레드 안전 자료구조입니다."
+      },
+      {
+        title: "6. String, StringBuilder, StringBuffer 차이는?",
+        easy: "칠판에 글을 쓰는 세 가지 방식입니다. String은 불변(Immutable)이라 칠판 글씨를 바꿀 때마다 칠판을 새로 사 와야 합니다(새 메모리 할당). StringBuilder는 지우개로 지우고 바로 고쳐 쓸 수 있는 1인용 일반 칠판입니다. StringBuffer는 여러 명이 분필을 뺏어가며 쓰는 칠판으로, 교대 시간(동기화)이 조금 걸리지만 안전합니다.",
+        keywords: ["불변성 (Immutability)", "가변성 (Mutability)", "Thread-Safety (동기화 여부)", "String Pool", "메모리 재생성"],
+        interview: "String은 불변 객체로 수정 시마다 새로운 메모리 영역에 문자열 객체를 생성하여 성능 저하가 일어납니다. 반면 StringBuilder와 StringBuffer는 내부 버퍼를 이용한 가변 객체입니다. 이 중 StringBuilder는 동기화를 지원하지 않아 단일 스레드 성능이 가장 뛰어나며, StringBuffer는 내부 메서드들에 synchronized 키워드가 적용되어 멀티스레드 환경에서 안전합니다."
+      },
+      {
+        title: "7. checked exception과 unchecked exception 차이는?",
+        easy: "시험 기간의 확인 도장과 같습니다. Checked Exception은 선생님이 검사하는 필수 과제라 반드시 에러 처리(try-catch)를 해왔는지 검사하며, 안 하면 컴파일이 거부됩니다. Unchecked Exception은 학생 본인의 실수로 생기는 돌발 사고(NPE 등)로, 컴파일러가 강제하진 않습니다.",
+        keywords: ["RuntimeException 상속 여부", "컴파일 시점 검사 강제", "예외 복구 전략", "@Transactional 기본 롤백 범위"],
+        interview: "Checked Exception은 Exception을 직접 상속받는 예외로, 컴파일 타임에 예외 처리가 강제되어 반드시 예외 복구(try-catch)나 throws 선언을 해야 합니다. 반면 Unchecked Exception은 RuntimeException을 상속받는 예외로 컴파일러가 강제하지 않으며 주로 개발자 부주의로 발생하는 예외들입니다. Spring의 @Transactional은 기본 설정 상 Unchecked Exception만 롤백 대상으로 인지하므로 예외 설계 시 이를 고려해야 합니다."
+      },
+      {
+        title: "8. final 키워드의 의미는?",
+        easy: "박제 처리입니다. 변수에 붙이면 다른 값으로 교체할 수 없고(상수), 메서드에 붙이면 자식이 동작 방식을 변경(오버라이딩)할 수 없으며, 클래스에 붙이면 상속할 수 없게 차단합니다.",
+        keywords: ["재할당 방지 (상수)", "메서드 오버라이딩 차단", "클래스 상속 제한", "불변 참조"],
+        interview: "자바에서 final 키워드는 대상을 불변 또는 상속 불가하도록 제한합니다. 첫째 final 변수는 최초 초기화 이후 재할당이 불가한 상수가 됩니다. 둘째 final 메서드는 자식 클래스에서 오버라이딩할 수 없게 설계 규칙을 제한합니다. 셋째 final 클래스는 더 이상 하위 클래스를 생성할 수 없게 상속을 금지합니다. 단, final 참조 변수는 주소 재할당이 안 될 뿐 참조하는 객체 내부의 상태값(필드) 변경까지 막지는 못합니다."
+      },
+      {
+        title: "9. 오버로딩과 오버라이딩 차이는?",
+        easy: "다기능 만능 리모컨과 커스텀 덮어쓰기입니다. 오버로딩은 한 리모컨에 '전원' 버튼을 누를 때 TV를 켤지, 에어컨을 켤지 매개변수(인자)에 따라 골라 누르는 기술이고, 오버라이딩은 부모가 준 물건에 자식만의 맞춤형 스티커를 위에 새로 덮어씌워 완전히 다르게 재가공해 사용하는 기술입니다.",
+        keywords: ["메서드 시그니처 (이름, 매개변수)", "컴파일 타임 다형성 (정적 바인딩)", "런타임 다형성 (동적 바인딩)", "상속 관계"],
+        interview: "오버로딩(Overloading)은 동일한 이름의 메서드를 매개변수의 타입, 개수, 순서를 다르게 하여 한 클래스 내에 여러 개 정의하는 컴파일 타임 다형성(정적 바인딩) 기술입니다. 반면 오버라이딩(Overriding)은 상속 또는 구현 관계에서 부모의 메서드를 자식 클래스 목적에 맞게 재정의하는 런타임 다형성(동적 바인딩) 기술입니다."
+      },
+      {
+        title: "10. Java의 OOP 4대 특성을 설명하시오.",
+        easy: "프랜차이즈 카페의 운영 형태와 같습니다. 레시피를 주방에 감추고 메뉴판으로만 접근하게 하는 캡슐화, 본사 인테리어를 이어받는 상속, 컵홀더 규격을 통일해 음료 종류 관계없이 같은 컵에 담는 다형성, '음료 만들기'라는 핵심 역할만 선언하고 각 매장에서 실제 제조하는 추상화입니다.",
+        keywords: ["캡슐화 (Encapsulation)", "상속 (Inheritance)", "다형성 (Polymorphism)", "추상화 (Abstraction)"],
+        interview: "객체지향 프로그래밍의 4대 특성은 첫째, 데이터와 로직을 묶고 접근 제어자로 내부를 숨기는 캡슐화, 둘째, 공통 설계를 재사용하여 계층 관계를 이루는 상속, 셋째, 하나의 인터페이스나 상위 타입으로 다양한 하위 구현체를 처리하는 다형성, 넷째, 구체적인 세부 구현 대신 핵심 역할 인터페이스만 정의하여 복잡성을 줄이는 추상화입니다."
+      },
+      {
+        title: "11. Spring IoC와 DI를 설명하시오.",
+        easy: "배달 앱(Spring)과 손님(개발자)의 관계입니다. 예전에는 손님이 직접 재료를 장보고 요리했으나(new 객체 생성), 이제는 배달 앱에 주문(어노테이션 등록)만 해두면 앱이 완성된 요리(Bean)를 방에 배달(주입)해 주어 가져다 먹기만 하면 됩니다.",
+        keywords: ["제어의 역전 (IoC)", "의존성 주입 (DI)", "Spring Container (ApplicationContext)", "결합도 완화", "테스트 용이성"],
+        interview: "IoC는 객체의 생성, 관리, 소멸 등의 제어권을 개발자가 아닌 Spring Container가 담당하는 설계 기법입니다. DI는 객체가 필요로 하는 의존 객체를 컨테이너가 런타임에 결정하여 주입해 주는 방식(생성자 주입 권장)입니다. 이를 통해 클래스 간의 강한 결합도를 낮추고 유연한 테스트와 다형성 확장을 가능하게 만듭니다."
+      },
+      {
+        title: "12. Bean의 생명주기를 설명하시오.",
+        easy: "호텔 객실 투숙 과정입니다. 체크인 및 짐 풀기(객체 생성 -> 의존성 주입), 웰컴 드링크 제공(초기화 콜백: @PostConstruct), 투숙 완료(Application 사용), 체크아웃 후 방 청소(소멸 콜백: @PreDestroy) 순으로 진행됩니다.",
+        keywords: ["객체 생성", "의존성 주입 (DI)", "초기화 콜백 (@PostConstruct)", "소멸 콜백 (@PreDestroy)", "컨테이너 관리"],
+        interview: "Spring Bean의 생명주기는 객체 생성 ➔ 의존성 주입 ➔ 초기화 콜백 ➔ Bean 사용 ➔ 소멸 콜백 순서로 관리됩니다. 의존성 주입이 끝난 직후 준비 작업을 수행하도록 `@PostConstruct` 또는 `InitializingBean` 인터페이스를 구현하며, 컨테이너 종료 시 안전하게 리소스를 반환하도록 `@PreDestroy` 또는 `DisposableBean`을 사용하여 생명주기를 제어합니다."
+      },
+      {
+        title: "13. @Component, @Service, @Repository, @Controller 차이는?",
+        easy: "아파트 동대표들의 역할 표식입니다. 다 같은 사람(Spring Bean)이지만 가슴에 찬 띠에 따라 하는 일(웹 요청 처리, 비즈니스 연산, 창고 데이터 정리 등)과 자동으로 부여받는 특별 보조 기능(DB 에러 자동 번역 등)이 다릅니다.",
+        keywords: ["Stereotype 어노테이션", "Component Scan", "데이터 계층 예외 변환 (DataAccessException)", "Spring MVC 역할 분담"],
+        interview: "이들은 모두 Component Scan을 통해 Spring Bean으로 등록되지만, 소프트웨어 아키텍처 계층 관점에서 역할을 명시합니다. `@Controller`는 HTTP 요청과 웹 계층 응답을 처리하고, `@Service`는 핵심 비즈니스 로직 경계를 구성하며, `@Repository`는 데이터 접근 기술의 예외를 스프링 공통의 `DataAccessException`으로 추상화하여 번역해 줍니다. `@Component`는 일반 유틸리티 빈에 사용합니다."
+      },
+      {
+        title: "14. @Transactional 동작 원리를 설명하시오.",
+        easy: "은행 창구 거래의 세이프가드입니다. 거래를 시작하면 은행 점원 대신 특수 보호대리인(AOP Proxy)이 앞에 섭니다. 대리인은 거래가 무사히 끝나면 모든 장부를 금고에 넣고 잠그고(Commit), 중간에 에러가 나면 장부를 다 찢어 거래를 없던 일로 만듭니다(Rollback).",
+        keywords: ["AOP (Aspect Oriented Programming)", "JDK Dynamic Proxy / CGLIB", "PlatformTransactionManager", "Commit / Rollback"],
+        interview: "Spring의 `@Transactional`은 AOP 프록시 기반으로 동작합니다. 대상 메서드 호출 전 프록시가 `TransactionManager`를 통해 트랜잭션을 획득하여 시작합니다. 정상 종료 시에는 커밋을 호출하고, RuntimeException 등 예외 발생 시에는 롤백을 수행한 뒤 트랜잭션을 종료합니다. 프록시 내부에서 데이터베이스 커넥션 관리와 커밋/롤백 제어가 캡슐화되어 동작합니다."
+      },
+      {
+        title: "15. @Transactional이 동작하지 않는 대표 사례는?",
+        easy: "1인 2역의 대화 오류입니다. 외부 감시 창구(Proxy)를 거치지 않고 클래스 내부에서 자기 다른 방에 직접 전화를 걸면(Self-Invocation), 감시자(Proxy)가 호출 사실을 전혀 몰라 트랜잭션 자물쇠가 아예 걸리지 않습니다.",
+        keywords: ["자가 호출 (Self-Invocation)", "프록시 바이패스", "AOP 미작동", "Public 메서드 제한", "클래스 분리"],
+        interview: "대표적으로 클래스 내부 메서드 호출(자가 호출, Self-Invocation) 시 프록시 객체를 거치지 않고 `this` 직접 호출이 발생하므로 `@Transactional`이 동작하지 않습니다. 또한 AOP 프록시는 상속/위임을 기반으로 구현되므로 `private` 메서드나 `final` 메서드/클래스에도 트랜잭션이 적용되지 않습니다. 자가 호출 문제는 빈을 분리하여 의존성으로 호출하거나, 자가 주입을 통해 해결해야 합니다."
+      },
+      {
+        title: "16. Filter, Interceptor, AOP 차이는?",
+        easy: "건물 보안 검문소 3단계입니다. Filter는 회사 로비 정문으로 외부인 출입증(인증, CORS)을 웹 바깥에서 검사합니다. Interceptor는 복도 문으로 특정 사무실(Controller) 직전에서 권한을 검사합니다. AOP는 사무실 안의 정교한 개인 금고(메서드 실행)를 감싸 관리합니다.",
+        keywords: ["서블릿 컨테이너(Filter)", "Spring Context(Interceptor)", "Proxy 패턴(AOP)", "동작 시점과 컨텍스트", "DispatcherServlet"],
+        interview: "Filter는 웹 서블릿 컨테이너 영역(DispatcherServlet 앞단)에서 동작하여 CORS, 인코딩, 공통 웹 보안 필터링 등 HTTP 요청 자체의 유효성 검증과 변환에 적합합니다. Interceptor는 Spring Context 내부에서 DispatcherServlet과 컨트롤러 사이에 동작하며 컨트롤러의 ModelAndView나 예외에 접근할 수 있어 로그인 상태 체크 및 컨트롤러 단위 권한 제어에 쓰입니다. AOP는 웹 계층에 국한되지 않고 서비스 및 리포지토리 계층의 Spring Bean 메서드 호출 시점에 CGLIB/JDK Dynamic Proxy를 통해 트랜잭션(@Transactional), 메서드 성능 로깅 등의 횡단 관심사(Cross-cutting Concern)를 모듈화하는 데 사용됩니다."
+      },
+      {
+        title: "17. Spring MVC 요청 흐름을 설명하시오.",
+        easy: "회사의 안내원(DispatcherServlet)과 처리원(Controller)의 조화입니다. 입구 안내원(DispatcherServlet)이 요청을 받으면 1) 매핑 부서(HandlerMapping)에서 담당 부서를 찾고, 2) 연결 젠더(HandlerAdapter)를 꽂아 부서원(Controller)을 깨워 일 시킨 후, 3) 뷰 전환기(ViewResolver)나 JSON 포장기(HttpMessageConverter)를 통해 예쁘게 포장해 돌려보냅니다.",
+        keywords: ["DispatcherServlet(프론트 컨트롤러)", "HandlerMapping", "HandlerAdapter", "HttpMessageConverter", "ViewResolver"],
+        interview: "Spring MVC는 중앙 집중식 프론트 컨트롤러 패턴인 DispatcherServlet을 중심으로 동작합니다. 요청이 수신되면, 첫째 HandlerMapping이 요청 URL에 부합하는 핸들러(Controller)를 탐색합니다. 둘째 HandlerAdapter가 해당 핸들러의 메서드를 실제로 호출하고 실행 결과를 수령합니다. 셋째 컨트롤러가 JSON 응답을 할 때는 `@ResponseBody`와 함께 HttpMessageConverter가 작동하여 자바 객체를 직렬화하여 반환하며, 화면 응답 시에는 ViewResolver가 논리 뷰 이름을 토대로 실제 물리 뷰 객체를 찾아 렌더링을 처리합니다."
+      },
+      {
+        title: "18. RESTful API란 무엇인가?",
+        easy: "우편물 양식 표준화 규격입니다. 편지 주소창에는 자원 이름(Resource)만 명사로 적고, 배달원에게 바라는 동작은 우표 색깔(HTTP Method - GET, POST, PUT, DELETE)로만 통일하여 의사소통하는 합의입니다.",
+        keywords: ["자원의 식별 (URI)", "행위의 표현 (HTTP Method)", "멱등성 (Idempotency)", "상태 코드 표준화", "Self-Descriptive"],
+        interview: "RESTful API는 웹 표준 HTTP 프로토콜의 강점을 최대한 활용하여 자원을 명시적으로 제어하는 아키텍처 스타일입니다. 첫째 자원은 명사형 URI로 고유하게 식별합니다. 둘째 자원에 대한 행위는 HTTP Method(GET: 조회, POST: 생성, PUT/PATCH: 수정, DELETE: 삭제)로 매핑합니다. 셋째 명확한 HTTP 상태 코드(200, 201, 400, 401, 403, 500)를 반환하여 결과의 의미를 투명하게 제공합니다."
+      },
+      {
+        title: "19. Spring Boot의 장점은?",
+        easy: "밀키트 요리 상자입니다. 예전엔 냄비 사고 물 양 맞추는 세팅(XML 설정, 의존성 충돌 수동 조절)을 다 직접 해야 했지만 스프링 부트는 1) 자동 매칭 설정(Auto Configuration), 2) 패키지 묶음(Starters), 3) 가스레인지 포함 패키지(내장 Tomcat)를 제공해 뚝딱 완성해 줍니다.",
+        keywords: ["Auto Configuration(자동 설정)", "Starter 라이브러리 의존성", "내장 WAS(Tomcat 등)", "Spring Boot Actuator", "java -jar 독립 배포"],
+        interview: "Spring Boot는 기존 Spring Framework 개발의 복잡성을 대폭 개선한 기술입니다. 핵심 장점은 네 가지입니다. 첫째, 의존성 관계와 어노테이션 기반 라이브러리 설정을 프레임워크가 알아서 활성화하는 Auto Configuration(자동 설정), 둘째, 관련 라이브러리 패키지를 버전 충돌 없이 묶음으로 제공하는 Starters, 셋째, 외장 톰캣 배포 없이 `java -jar`만으로 서비스를 단독 가동하는 내장 WAS, 넷째, 운영 환경 모니터링을 위한 헬스체크 및 성능 지표를 즉각 제공하는 Actuator입니다. 이를 통해 초기 생산성과 독립 배포 효율성을 극대화합니다."
+      },
+      {
+        title: "20. Controller에서 Entity를 그대로 반환하면 왜 위험한가?",
+        easy: "기밀 원장 장부(Entity)를 외부에 그냥 노출시키는 것입니다. DTO 완충재 없이 날것으로 주면 비밀번호(민감 필드)가 같이 노출되고, 스펙 변경 시 API 깨짐이 발생하며, 양방향 꼬리로 인해 무한 루프에 걸려 서버가 다운될 수 있습니다.",
+        keywords: ["DB 스키마 감추기", "민감 데이터 보호", "양방향 순환 참조 방지", "LazyInitializationException 예방", "API 스펙 일관성"],
+        interview: "Entity와 DTO의 분리는 아키텍처적 유연성과 안정성을 위해 필수적입니다. 첫째, Entity를 직접 반환하면 DB 설계 정보 및 패스워드 등 보안 민감 필드가 API 응답 스펙에 노출될 수 있습니다. 둘째, Entity 컬럼이 변경되면 API 응답 구조가 깨져 프론트엔드에 직접 장애를 미치므로 DTO를 완충재로 두어야 합니다. 셋째, JPA 양방향 연관관계 시 Jackson 라이브러리가 직렬화하면서 발생하는 순환 참조 무한 루프 현상이나, 트랜잭션 밖에서 프록시 객체의 지연 로딩 접근 시 발생하는 LazyInitializationException을 DTO 변환 과정에서 원천 차단할 수 있습니다."
+      },
+      {
+        title: "21. 인덱스의 장점과 단점은?",
+        easy: "책 맨 뒤에 적힌 키워드 색인표입니다. 단번에 원하는 단어를 찾아 페이지를 이동(검색 가속화)할 수 있지만, 책에 글씨를 쓰거나 고칠(INSERT, UPDATE, DELETE) 때마다 색인표도 매번 다시 찾아서 고쳐 적어야 하므로 글쓰기 속도는 더 느려집니다.",
+        keywords: ["검색 속도 향상 (B-Tree 자료구조)", "CUD (쓰기/수정/삭제) 성능 희생", "인덱스 추가 저장 공간", "선택도 (Selectivity) 고려"],
+        interview: "데이터베이스 인덱스는 특정 컬럼의 값을 정렬하여 검색 성능을 극대화하는 색인 자료구조입니다. 장점은 WHERE, JOIN, ORDER BY 쿼리 수행 시 테이블 전체 스캔을 피해 성능을 향상시킵니다. 단점은 INSERT, UPDATE, DELETE 쿼리 실행 시마다 인덱스 노드 분할 및 재배열 비용이 수반되어 쓰기 성능이 저하되고 추가 저장 공간이 요구된다는 점입니다. 따라서 카디널리티가 높고 선택도가 좋은 컬럼 위주로 설정해야 합니다."
+      },
+      {
+        title: "22. 트랜잭션 ACID를 설명하시오.",
+        easy: "완벽주의 로봇의 행동 원칙입니다. 할 거면 확실히 다 하고 실수하면 뒤로 감기(원자성), 끝내도 정상 규칙 이내(일관성), 남들 작업에 영향 안 줌(격리성), 끝난 정리는 평생 보존(지속성)입니다.",
+        keywords: ["원자성 (Atomicity - Rollback)", "일관성 (Consistency)", "격리성 (Isolation)", "지속성 (Durability)"],
+        interview: "트랜잭션의 ACID는 첫째, 모두 성공하거나 모두 실패함을 보장하는 원자성(Atomicity), 둘째, 실행 전후 데이터베이스 정합성 규칙이 깨지지 않는 일관성(Consistency), 셋째, 동시 트랜잭션들이 격리되어 상호 간섭이 차단되는 격리성(Isolation), 넷째, 성공적으로 완료된 트랜잭션은 시스템 장애가 나도 영구 보존되는 지속성(Durability)입니다."
+      },
+      {
+        title: "23. 트랜잭션 격리 수준을 설명하시오.",
+        easy: "책상을 가리는 4가지 단계의 칸막이입니다. 1단계: 남이 끄적이는 메모 엿보기(Read Uncommitted), 2단계: 최종 통과된 보고서만 보기(Read Committed), 3단계: 내 책상 위 문서가 중간에 안 바뀜(Repeatable Read), 4단계: 방에 한 명씩만 독방(Serializable)의 수준입니다.",
+        keywords: ["Dirty Read", "Non-Repeatable Read", "Phantom Read", "MVCC", "InnoDB Next-Key Lock"],
+        interview: "트랜잭션 격리 수준은 데이터 일관성과 성능 간의 균형을 맞추는 장치입니다. 대부분의 DB는 Read Committed를 기본으로 사용하여 Dirty Read를 방지하며, MySQL InnoDB는 Repeatable Read를 사용하여 MVCC와 갭 락(Gap Lock)/Next-Key Lock으로 Phantom Read까지 효과적으로 방지합니다. 다만 격리 수준에만 의존하지 말고, 실제 재고 수량 계산 등 다수 트랜잭션 충돌이 잦은 핵심 비즈니스 로직에는 낙관적/비관적 락을 명시적으로 결합해야 데이터 정합성을 철저히 지킬 수 있습니다."
+      },
+      {
+        title: "24. 분산 캐시 & Redis 캐싱 전략",
+        easy: "캐시는 자주 쓰는 물건을 꺼내두는 서랍과 같습니다. 서랍 크기가 한정되어 있으니 너무 오랜 시간 방치하면 안 되고(TTL 설정), 꺼냈을 때 물건의 형태(Class 구조)가 바뀌어 있으면 삐걱거리므로 안전하게 DTO/JSON 표준으로 변환해 보관해야 합니다.",
+        keywords: ["메모리 고갈(OOM) 방지", "만료 시간(TTL) 필수 설정", "Entity 직접 캐싱 금지", "DTO 변환 저장", "직렬화 호환성(InvalidClassException) 예방"],
+        interview: "Redis 캐싱을 설계할 때는 첫째, 메모리 자원 임계를 관리하기 위해 모든 캐시 데이터에 명시적인 만료 시간(TTL)을 지정해 OOM을 예방해야 합니다. 둘째, JPA Entity 클래스를 직접 직렬화하여 캐싱하면 스키마나 필드 변경 시 역직렬화 실패가 발생하므로, 반드시 캐시 전용 DTO로 변환하거나 JSON 문자열 형태로 직렬화하여 적재해야 변경에 유연합니다."
+      },
+      {
+        title: "25. Read Replica & 읽기 쓰기 분리",
+        easy: "본점(Primary)과 지점(Replica)을 분리해 일하는 것과 같습니다. 돈 입금은 본점에서만 하고, 장부 조회는 지점에서도 처리하게 합니다. 본점 소식이 지점에 전달(동기화)되는 데 몇 초 늦어지므로, 입금하자마자 바로 지점에 가서 잔액을 물어보면(Replication Lag) 없다고 뜰 수 있어 유의해야 합니다.",
+        keywords: ["복제 지연(Replication Lag)", "Primary/Replica 데이터 불일치", "Stale Read 이슈", "LazyConnectionDataSourceRouting", "쓰기 트랜잭션 내 즉시 조회"],
+        interview: "읽기/쓰기 분리 환경에서는 DB 간 물리적 복제 속도 차이로 발생하는 Replication Lag을 대응해야 합니다. 데이터를 수정한 직후의 조회 흐름이나 실시간 데이터 정합성이 필수적인 비즈니스(예: 결제 완료 직후 상세 조회)는 Replica가 아닌 Primary DB로 조회를 강제하도록 설정해야 하며, Spring에서는 `@Transactional(readOnly = true)` 어노테이션을 기반으로 분기하는 DataSource Routing 설정을 통해 제어합니다."
+      },
+      {
+        title: "26. 로드밸런서 & Health Check API",
+        easy: "문지기(로드밸런서)가 직원의 건강 상태(Health Check)를 수시로 재는 것과 같습니다. '살아있나요?'하고 가볍게 체온만 재면 되는데, 매번 정밀 피검사(DB 쿼리)를 시키면 직원들이 지쳐 쓰러지고 결국 문지기가 건강하지 않다고 쫓아내며(서버 오프라인) 가게 전체가 망하게 됩니다.",
+        keywords: ["로드밸런서(ALB) 헬스체크", "연쇄 장애(Cascading Failure)", "DB 커넥션 고갈 예방", "체크 엔드포인트 분리", "경량 200 OK 응답"],
+        interview: "로드밸런서의 주기적인 Health Check API는 DB 쿼리나 외부 연동 검사 없이, 오직 애플리케이션의 메모리와 포트 생존 여부만을 반환하도록 가볍게(200 OK) 설계해야 합니다. 만약 헬스체크 시 DB 조회를 수행하게 하면 DB 일시 부하 발생 시 모든 서버의 헬스체크가 타임아웃되어 서비스 전체가 다운되는 연쇄 장애(Cascading Failure)를 유발하므로, 단순 생존 체크와 정밀 상태 점검(/health/detail) API는 반드시 이원화해야 합니다."
+      },
+      {
+        title: "27. DB 락 (비관적 락 vs 낙관적 락 & 락 범위)",
+        easy: "공유 도서 대출 장부의 관리 방식입니다. 1) 비관적 락은 다른 사람이 낙서하지 못하게 장부에 무조건 쇠사슬을 채워 잠그는(SELECT FOR UPDATE) 것이고, 2) 낙관적 락은 버전 번호를 달아두고 나중에 버전이 어긋나면 거부하는 방식입니다. 인덱스가 없는 컬럼을 잠그려 하면 테이블 전체를 자물쇠로 잠가버립니다.",
+        keywords: ["비관적 락(Pessimistic Lock)", "낙관적 락(Optimistic Lock)", "테이블 스캔 락(Table Lock) 유발", "인덱스 누락 위험", "데드락(Deadlock) 방지"],
+        interview: "비관적 락은 데이터 정합성을 강제하는 대신 동시 대기와 데드락을 유발합니다. 특히 RDBMS는 인덱스를 기준으로 잠금을 수행하므로, 인덱스가 없는 컬럼 조건으로 `SELECT FOR UPDATE`를 수행하면 테이블 전체가 잠기는 장애가 발생합니다. 따라서 비관적 락은 반드시 INDEX가 설정된 조건절을 타게 해야 하며, 가능한 PK 단건 조회를 통해 범위를 좁혀야 합니다. 반면 동시 충돌 빈도가 적다면 JPA 버전을 이용한 낙관적 락으로 대기 없는 롤백 처리를 하는 편이 처리량에 유리합니다."
+      },
+      {
+        title: "28. Rate Limiting (트래픽 처리량 제한)",
+        easy: "아파트 커뮤니티의 1일 입장 제한입니다. 출입구가 1개면 문에 공책(Local Map)을 쓰면 되지만, 출입구가 3개(다중 서버)로 늘어나면 공책을 각각 써서는 총합을 정확히 맞출 수 없으므로 관리사무소의 공통 전산망(Redis)에 접속해서 인원을 세어야 정확한 차단이 가능합니다.",
+        keywords: ["분산 트래픽 제어", "로컬 카운터의 한계", "Redis 분산 메모리", "Token Bucket 알고리즘", "API Gateway 배치"],
+        interview: "다중 서버 환경에서 일관되게 호출을 제한하기 위해서는 로컬 메모리가 아닌 **Redis와 같은 공통 분산 메모리**에 카운트를 누적하고 제어해야 합니다. 로컬 카운터를 쓰면 서버 대수만큼 실제 트래픽 한도가 우회되어 트래픽 제한 정책이 무력화되기 때문입니다. 실무적으로는 Redis의 `INCR` 연산 및 `EXPIRE` 설정을 조합하거나, 결합도를 낮추기 위해 시스템 맨 앞단의 API Gateway 계층에서 공통으로 트래픽을 제어하는 구조를 선택합니다."
+      },
+      {
+        title: "29. 비동기 큐 & 트랜잭션 어노테이션 (Transaction & Async Message)",
+        easy: "쇼핑몰 결제와 배송팀 호출의 관계입니다. 결제 금액 이체가 완료(DB Commit)되기도 전에 배송팀에 출발 신호를 보내면, 중간에 결제 에러가 나더라도 배송은 나가버려 배달 사고가 생깁니다. 따라서 결제 완료 도장이 찍힌 것을 확인한 뒤에 비동기 전달(AFTER_COMMIT)해야 안전합니다.",
+        keywords: ["@Transactional 경계", "비동기 큐 발행 정합성", "소비자(Worker) 조회 실패 방지", "TransactionalEventListener", "Outbox 패턴"],
+        interview: "트랜잭션 내부에서 메시지 큐(Kafka, SQS 등)로 즉시 비동기 메시지를 전송하면, 데이터베이스 커밋 완료 이전에 컨슈머가 이벤트를 소모해버려 '데이터가 존재하지 않는' 조회 에러가 나거나 트랜잭션이 롤백되어도 이벤트가 취소되지 않는 정합성 오류가 납니다. 따라서 Spring의 `@TransactionalEventListener`의 `phase = TransactionPhase.AFTER_COMMIT`을 사용해 커밋 완료가 보장된 직후 메시지를 안전하게 발행해야 합니다."
+      },
+      {
+        title: "30. OSIV (Open Session in View) 설정 전략",
+        easy: "손님이 계산대를 지나 가게 밖으로 나갈 때(View 응답 완료)까지 점원(DB 커넥션)이 짐을 들고 같이 대기하느라 다음 손님을 응대할 점원이 없어 입구(커넥션 풀)가 터져버리는 장애입니다. OSIV를 꺼서 계산 즉시 점원을 복귀시켜야 회전율이 오릅니다.",
+        keywords: ["spring.jpa.open-in-view", "DB 커넥션 조기 해제", "LazyInitializationException", "트랜잭션 밖 지연로딩 제한", "Fetch Join / EntityGraph"],
+        interview: "OSIV가 활성화되어 있으면 Controller나 View 렌더링 시점까지 DB 커넥션을 점유하여 커넥션 풀 부족 장애를 유발하기 쉽습니다. 따라서 대용량 트래픽 환경에서는 OSIV를 비활성화(`spring.jpa.open-in-view=false`)하여 커넥션 점유 시간을 최소화해야 하며, 이로 인해 트랜잭션 밖에서 발생하는 `LazyInitializationException`은 Service 계층 트랜잭션 내에서 Fetch Join, EntityGraph, 또는 DTO Projection을 통해 연관 데이터를 완벽히 채워 반환함으로써 해결해야 합니다."
+      }
+    ];
+
+    const conceptExamples = {
+      "1.": `class MemoryExample {
+  private static final String APP_NAME = "shop"; // Method Area
+
+  public void run() {
+    int count = 3;                              // Stack frame
+    Order order = new Order(count);             // Heap object
+    order.pay();
+  }
+}
+
+// run()이 끝나면 count 참조는 사라지지만,
+// Heap의 Order는 더 이상 참조되지 않을 때 GC 대상이 됩니다.`,
+      "2.": `class GcPressureExample {
+  List<byte[]> snapshots = new ArrayList<>();
+
+  void handleRequest() {
+    byte[] temp = new byte[1024 * 1024];        // 보통 Young 영역
+    snapshots.add(temp);                        // 계속 참조하면 Old 영역으로 승격 가능
+  }
+}
+
+// 요청마다 snapshots가 커지면 GC가 회수하지 못합니다.
+// 캐시라면 크기 제한과 TTL을 두고, 임시 객체는 메서드 밖으로 보관하지 않습니다.`,
+      "3.": `class CouponKey {
+  private final String code;
+  private final Long userId;
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (!(o instanceof CouponKey)) return false;
+    CouponKey other = (CouponKey) o;
+    return Objects.equals(code, other.code)
+        && Objects.equals(userId, other.userId);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(code, userId);
+  }
+}`,
+      "4.": `Map<String, Integer> stock = new HashMap<>();
+stock.put("A-001", 10);
+stock.put("B-001", 20);
+
+Integer quantity = stock.get("A-001");
+
+// 내부적으로 key.hashCode()로 버킷 위치를 찾고,
+// 충돌이 있으면 equals()로 진짜 같은 key인지 다시 비교합니다.`,
+      "5.": `class LocalCounter {
+  private final ConcurrentMap<String, LongAdder> counters =
+      new ConcurrentHashMap<>();
+
+  void increase(String key) {
+    counters.computeIfAbsent(key, ignored -> new LongAdder())
+        .increment();
+  }
+}
+
+// 단일 JVM 내 동시성에는 ConcurrentHashMap이 맞습니다.
+// 여러 서버가 공유해야 하는 제한값이면 Redis 같은 외부 저장소가 필요합니다.`,
+      "6.": `StringBuilder builder = new StringBuilder();
+for (Order order : orders) {
+  builder.append(order.id())
+      .append(",")
+      .append(order.amount())
+      .append("\\n");
+}
+String csv = builder.toString();
+
+// 루프 안 String += 는 매번 새 String을 만들기 쉽습니다.`,
+      "7.": `@Transactional(rollbackFor = IOException.class)
+public void importOrders(Path file) throws IOException {
+  List<Order> orders = orderParser.parse(file);
+  orderRepository.saveAll(orders);
+  fileStorage.upload(file);
+}
+
+// checked exception에도 롤백이 필요하다면 rollbackFor를 명시합니다.
+// 복구 불가능한 도메인 실패라면 RuntimeException으로 감싸는 방법도 있습니다.`,
+      "8.": `class OrderLines {
+  private final List<OrderLine> lines;
+
+  OrderLines(List<OrderLine> lines) {
+    this.lines = List.copyOf(lines);            // 방어적 복사
+  }
+
+  List<OrderLine> values() {
+    return Collections.unmodifiableList(lines); // 외부 변경 차단
+  }
+}
+
+// final은 참조 재할당만 막고, 가변 객체 내부 변경은 막지 못합니다.`,
+      "9.": `class PaymentClient {
+  void pay(Long orderId) { }
+  void pay(Long orderId, int amount) { }        // 오버로딩
+}
+
+interface DiscountPolicy {
+  int discount(int amount);
+}
+
+class VipDiscountPolicy implements DiscountPolicy {
+  @Override
+  public int discount(int amount) {             // 오버라이딩
+    return (int) (amount * 0.9);
+  }
+}`,
+      "10.": `interface PayClient {
+  void pay(PaymentCommand command);             // 추상화
+}
+
+class Order {
+  private OrderStatus status;                   // 캡슐화
+
+  void pay(PayClient client) {
+    if (status != OrderStatus.READY) {
+      throw new InvalidOrderStatusException();
+    }
+    client.pay(PaymentCommand.from(this));      // 다형성
+    this.status = OrderStatus.PAID;
+  }
+}`,
+      "11.": `@Service
+class OrderService {
+  private final OrderRepository orderRepository;
+  private final PaymentClient paymentClient;
+
+  OrderService(OrderRepository orderRepository,
+               PaymentClient paymentClient) {
+    this.orderRepository = orderRepository;
+    this.paymentClient = paymentClient;
+  }
+}
+
+// Service가 직접 new 하지 않고 컨테이너가 의존성을 주입합니다.`,
+      "12.": `@Component
+class WarmUpCache {
+  private final CacheClient cacheClient;
+
+  @PostConstruct
+  void load() {
+    cacheClient.preload();
+  }
+
+  @PreDestroy
+  void close() {
+    cacheClient.close();
+  }
+}`,
+      "13.": `@Controller
+class OrderController { }
+
+@Service
+class OrderService { }
+
+@Repository
+interface OrderRepository extends JpaRepository<Order, Long> { }
+
+@Component
+class OrderNumberGenerator { }
+
+// 모두 Bean이지만, 계층 의도와 부가 기능이 다릅니다.`,
+      "14.": `@Transactional
+public void cancel(Long orderId) {
+  Order order = orderRepository.findById(orderId)
+      .orElseThrow(OrderNotFoundException::new);
+  order.cancel();
+}
+
+// 프록시가 메서드 호출 전 트랜잭션을 시작하고,
+// 정상 종료 시 commit, RuntimeException 발생 시 rollback 합니다.`,
+      "15.": `@Service
+class OrderFacade {
+  private final OrderCancelService cancelService;
+
+  OrderFacade(OrderCancelService cancelService) {
+    this.cancelService = cancelService;
+  }
+
+  public void cancel(Long orderId) {
+    cancelService.cancelInTransaction(orderId); // 다른 Bean 호출로 프록시 통과
+  }
+}
+
+@Service
+class OrderCancelService {
+  @Transactional
+  public void cancelInTransaction(Long orderId) { }
+}`,
+      "16.": `class EncodingFilter implements Filter {
+  public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain) { }
+}
+
+class LoginInterceptor implements HandlerInterceptor {
+  public boolean preHandle(HttpServletRequest req, HttpServletResponse res, Object handler) {
+    return true;
+  }
+}
+
+@Aspect
+class ServiceLogAspect {
+  @Around("@annotation(org.springframework.transaction.annotation.Transactional)")
+  Object log(ProceedingJoinPoint pjp) throws Throwable {
+    return pjp.proceed();
+  }
+}`,
+      "17.": `@RestController
+class OrderController {
+  @GetMapping("/orders/{id}")
+  public OrderResponse find(@PathVariable Long id) {
+    return orderService.find(id);
+  }
+}
+
+// DispatcherServlet -> HandlerMapping -> HandlerAdapter -> Controller
+// -> HttpMessageConverter -> JSON 응답 순서로 흐릅니다.`,
+      "18.": `@RestController
+class OrderController {
+  @PostMapping("/orders")
+  ResponseEntity<OrderResponse> create(@RequestBody OrderRequest request) {
+    OrderResponse response = orderService.create(request);
+    return ResponseEntity.created(URI.create("/orders/" + response.id()))
+        .body(response);
+  }
+
+  @DeleteMapping("/orders/{id}")
+  ResponseEntity<Void> delete(@PathVariable Long id) {
+    orderService.delete(id);
+    return ResponseEntity.noContent().build();
+  }
+}`,
+      "19.": `@SpringBootApplication
+public class ShopApplication {
+  public static void main(String[] args) {
+    SpringApplication.run(ShopApplication.class, args);
+  }
+}
+
+// spring-boot-starter-web을 추가하면 MVC, Jackson, 내장 Tomcat이 함께 구성됩니다.
+// Actuator를 추가하면 /actuator/health 같은 운영 엔드포인트를 사용할 수 있습니다.`,
+      "20.": `@GetMapping("/users/{id}")
+public UserResponse find(@PathVariable Long id) {
+  User user = userService.find(id);
+  return new UserResponse(user.id(), user.email());
+}
+
+record UserResponse(Long id, String email) { }
+
+// passwordHash, role, 내부 연관관계는 응답 계약에 포함하지 않습니다.`,
+      "21.": `CREATE INDEX idx_orders_user_created
+ON orders(user_id, created_at);
+
+SELECT id, status, amount
+FROM orders
+WHERE user_id = 10
+ORDER BY created_at DESC
+LIMIT 20;
+
+-- 자주 조회하고 선택도가 있는 조건에 인덱스를 둡니다.
+-- 쓰기 비용과 저장 공간이 늘어나므로 무작정 많이 만들지는 않습니다.`,
+      "22.": `@Transactional
+public void transfer(Long fromId, Long toId, int amount) {
+  Account from = accountRepository.findById(fromId).orElseThrow();
+  Account to = accountRepository.findById(toId).orElseThrow();
+
+  from.withdraw(amount);
+  to.deposit(amount);
+}
+
+// 출금만 성공하고 입금이 실패하면 안 되므로 하나의 트랜잭션으로 묶습니다.`,
+      "23.": `@Transactional(isolation = Isolation.READ_COMMITTED)
+public OrderSummary readSummary(Long orderId) {
+  Order order = orderRepository.findById(orderId).orElseThrow();
+  return OrderSummary.from(order);
+}
+
+@Lock(LockModeType.PESSIMISTIC_WRITE)
+@Query("select s from Stock s where s.productId = :productId")
+Optional<Stock> findForUpdate(Long productId);
+
+// 격리 수준은 기본 안전망이고, 재고 차감 같은 충돌 지점은 락을 명시합니다.`,
+      "24.": `record UserCache(Long id, String email, String grade) { }
+
+void cache(User user) {
+  UserCache dto = new UserCache(user.id(), user.email(), user.grade().name());
+  redisTemplate.opsForValue().set(
+      "user:" + user.id(),
+      dto,
+      Duration.ofMinutes(30)
+  );
+}
+
+// Entity 대신 캐시 DTO를 TTL과 함께 저장합니다.`,
+      "25.": `@Transactional
+public OrderResponse pay(Long orderId) {
+  Order order = orderRepository.findByIdFromPrimary(orderId)
+      .orElseThrow();
+  order.pay();
+
+  // 결제 직후 화면은 Replica 지연을 피하기 위해 Primary 기준으로 응답을 만듭니다.
+  return OrderResponse.from(order);
+}
+
+@Transactional(readOnly = true)
+public List<OrderResponse> search(Long userId) {
+  return orderReader.findRecentFromReplica(userId);
+}`,
+      "26.": `@RestController
+class HealthController {
+  @GetMapping("/health")
+  ResponseEntity<String> health() {
+    return ResponseEntity.ok("UP");             // 로드밸런서용 경량 체크
+  }
+
+  @GetMapping("/health/detail")
+  HealthDetail detail() {
+    return healthProbe.checkDatabaseAndRedis(); // 운영자 진단용
+  }
+}`,
+      "27.": `@Lock(LockModeType.PESSIMISTIC_WRITE)
+@Query("select s from Stock s where s.productId = :productId")
+Optional<Stock> findForUpdate(Long productId);
+
+@Entity
+class Stock {
+  @Version
+  private long version;                         // 낙관적 락
+}
+
+// 충돌이 잦으면 비관적 락, 충돌이 드물면 낙관적 락을 검토합니다.`,
+      "28.": `boolean isAllowed(String clientIp) {
+  String key = "rate:" + clientIp;
+  Long count = redisTemplate.opsForValue().increment(key);
+
+  if (count != null && count == 1) {
+    redisTemplate.expire(key, Duration.ofMinutes(1));
+  }
+  return count != null && count <= 100;
+}
+
+// 로컬 Map이 아니라 Redis에 카운트를 모아야 서버가 여러 대여도 한도가 유지됩니다.`,
+      "29.": `@Transactional
+public void order(OrderRequest request) {
+  Order order = orderRepository.save(Order.create(request));
+  eventPublisher.publishEvent(new OrderCreatedEvent(order.id()));
+}
+
+@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+public void publish(OrderCreatedEvent event) {
+  messageProducer.send(event);
+}
+
+// DB 커밋이 성공한 뒤에만 메시지를 외부 큐로 보냅니다.`,
+      "30.": `spring.jpa.open-in-view=false
+
+@Transactional(readOnly = true)
+public OrderResponse find(Long id) {
+  Order order = orderRepository.findWithItems(id)
+      .orElseThrow(OrderNotFoundException::new);
+  return OrderResponse.from(order);
+}
+
+@Query("select o from Order o join fetch o.items where o.id = :id")
+Optional<Order> findWithItems(Long id);
+
+// OSIV를 끄면 Service 트랜잭션 안에서 필요한 연관 데이터를 미리 조회해야 합니다.`
+    };
+
+    function conceptExampleFor(title) {
+      const matched = title.match(/^(\d+)\./);
+      const key = matched ? `${matched[1]}.` : "";
+      return key ? conceptExamples[key] : "";
+    }
+
+    function renderConcepts() {
+      const conceptListRoot = document.getElementById("conceptList");
+      conceptListRoot.innerHTML = conceptsData.map(concept => {
+        const example = conceptExampleFor(concept.title);
+        return `
+        <article class="concept-card">
+          <h3 class="concept-title">${escapeHtml(concept.title)}</h3>
+          
+          <div class="concept-section">
+            <h4 class="easy-header">💡 이해하기 쉬운 설명 (비유)</h4>
+            <div class="easy-box">${escapeHtml(concept.easy)}</div>
+          </div>
+          
+          <div class="concept-section">
+            <h4 class="interview-header">🎤 면접 답변 가이드 (키워드 중심)</h4>
+            <div class="interview-box">
+              <div class="keywords-row">
+                ${concept.keywords.map(kw => `<span class="keyword-badge">${escapeHtml(kw)}</span>`).join("")}
+              </div>
+              <div class="interview-answer-text">${escapeHtml(concept.interview)}</div>
+            </div>
+          </div>
+
+          ${example ? `
+          <div class="concept-section">
+            <h4>예시 코드로 이해하기</h4>
+            <div class="concept-code-box">
+              <div class="concept-code-label">핵심 예시</div>
+              <pre><code>${highlightJava(example)}</code></pre>
+            </div>
+          </div>
+          ` : ""}
+        </article>
+      `;
+      }).join("");
+    }
+
+    renderConcepts();
+    renderLayerTips();
+    renderScenarioVariants();
+    renderFlowRelation();
+    renderConceptCoverage();
+    renderDecisionMatrix();
+    renderFlowSteps();
+    render();
+  </script>
+</body>
+</html>
